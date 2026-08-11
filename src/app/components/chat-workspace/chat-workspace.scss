@@ -1,0 +1,567 @@
+.chat-workspace {
+  // --- Dark Mode Stile ---
+  --bg-color: #0b1120;
+  --header-bg: #0b1120;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --text-main: #f8fafc;
+  --text-sub: #64748b;
+  --bubble-other-bg: #111827;
+  --bubble-other-text: #f1f5f9;
+  --bubble-me-bg: #3b82f6;
+  --bubble-me-text: #ffffff;
+  --input-bg: #111827;
+  --input-border: #1e293b;
+  --divider-line: rgba(255, 255, 255, 0.08);
+
+  // --- Light Mode Stile ---
+  &.light-mode {
+    --bg-color: #f8fafc;
+    --header-bg: #ffffff;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --text-main: #0f172a;
+    --text-sub: #94a3b8;
+    --bubble-other-bg: #ffffff;
+    --bubble-other-text: #1e293b;
+    --bubble-me-bg: #2563eb;
+    --bubble-me-text: #ffffff;
+    --input-bg: #ffffff;
+    --input-border: #e2e8f0;
+    --divider-line: rgba(0, 0, 0, 0.08);
+  }
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  box-sizing: border-box;
+
+  /* 1. STICKY HEADER */
+  .chat-header {
+    height:62px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .avatar {
+        position: relative;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .status-dot {
+          position: absolute;
+          bottom: -1px;
+          right: -1px;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #10b981;
+          border: 2px solid var(--header-bg);
+        }
+      }
+
+      .user-meta {
+        h3 {
+          margin: 0;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: var(--text-main);
+        }
+
+        .status-text {
+          font-size: 0.75rem;
+          color: var(--text-sub);
+        }
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 4px;
+
+      button {
+        color: var(--text-sub);
+      }
+    }
+  }
+
+  /* 2. SCROLLBARER NACHRICHTENBEREICH */
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .date-divider {
+      position: relative;
+      text-align: center;
+      margin: 16px 0;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+        background-color: var(--divider-line);
+      }
+
+      span {
+        position: relative;
+        background-color: var(--bg-color);
+        padding: 0 16px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-sub);
+        letter-spacing: 0.08em;
+      }
+    }
+
+    .message-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      max-width: 70%;
+
+      .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .message-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .bubble {
+          padding: 12px 16px;
+          border-radius: 16px;
+          font-size: 0.9rem;
+          line-height: 1.45;
+          word-break: break-word;
+        }
+
+        .meta {
+          font-size: 0.7rem;
+          color: var(--text-sub);
+          padding: 0 4px;
+        }
+      } 
+
+      /* Nachrichten der Gegenseite (Left) */
+      &:not(.me) {
+        align-self: flex-start;
+
+        .bubble {
+          background-color: var(--bubble-other-bg);
+          color: var(--bubble-other-text);
+          border-bottom-left-radius: 4px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+      }
+
+      /* Eigene Nachrichten (Right) */
+      &.me {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+
+        .message-content {
+          align-items: flex-end;
+
+          .bubble {
+            background-color: var(--bubble-me-bg);
+            color: var(--bubble-me-text);
+            border-bottom-right-radius: 4px;
+          }
+
+          .meta {
+            text-align: right;
+          }
+        }
+      }
+    }
+  }
+
+  .chat-input-area {
+    padding: 12px 24px 20px 24px;
+    background-color: var(--bg-color);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.expanded {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      top: 62px; // Unterhalb des Headers
+      z-index: 20;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+
+      .gemini-input-card {
+        flex: 1;
+        max-height: none;
+        border-radius: 20px;
+        padding: 16px 16px 12px 16px;
+
+        .input-row-container {
+          flex: 1;
+          align-items: flex-start;
+
+          .attach-btn, 
+          .inline-right-actions {
+            display: none;
+          }
+
+          .textarea-container {
+            height: 100%;
+            padding-right: 32px;
+
+            textarea {
+              max-height: none;
+              height: 100% !important;
+              overflow-y: auto;
+              line-height: 1.5;
+            }
+          }
+        }
+
+        .card-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 12px;
+
+          .left-actions, .right-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+        }
+      }
+    }
+
+    .gemini-input-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 28px; // Vollständige Pill-Form im Kompaktmodus
+      padding: 6px 12px 6px 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:focus-within {
+        border-color: rgba(59, 130, 246, 0.4);
+      }
+
+      /* 1. EINZEILIGER ZUSTAND (Standard) */
+      .input-row-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+
+        .attach-btn {
+          flex-shrink: 0;
+        }
+
+        .textarea-container {
+          flex: 1;
+          display: flex;
+          align-items: center;
+
+          textarea {
+            width: 100%;
+            height: 24px;
+            min-height: 24px;
+            max-height: 200px;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            line-height: 24px;
+            overflow-y: hidden;
+            padding: 0;
+
+            &::placeholder {
+              color: var(--text-sub);
+            }
+          }
+        }
+
+        .inline-right-actions {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+      }
+
+      .card-footer {
+        display: none; // Im Kompaktmodus ausblenden
+      }
+
+      .expand-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: transparent;
+        border: none;
+        color: var(--text-sub);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s ease, background-color 0.15s ease;
+
+        &:hover {
+          color: var(--text-main);
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
+
+      .file-previews {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-right: 30px; // Abstand zum Expand-Button
+
+        .file-chip {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background-color: rgba(255, 255, 255, 0.06);
+          padding: 4px 8px 4px 10px;
+          border-radius: 12px;
+          font-size: 0.8rem;
+          color: var(--text-main);
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            color: var(--text-sub);
+          }
+
+          button {
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            color: var(--text-sub);
+
+            mat-icon {
+              font-size: 14px;
+              width: 14px;
+              height: 14px;
+            }
+          }
+        }
+      }
+
+      .action-btn {
+        color: var(--text-sub);
+        width: 36px;
+        height: 36px;
+
+        &:hover {
+          color: var(--text-main);
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .send-btn {
+        width: 36px;
+        height: 36px;
+        box-shadow: none;
+
+        &:disabled {
+          opacity: 0.4;
+          background-color: var(--text-sub) !important;
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      /* 2. MEHRZEILIGER ZUSTAND (Card-Layout) */
+      &.is-multiline {
+        border-radius: 20px;
+        padding: 16px 16px 12px 16px;
+
+        .input-row-container {
+          align-items: flex-start;
+
+          .attach-btn, 
+          .inline-right-actions {
+            display: none; // Wandert im Card-Modus nach unten
+          }
+
+          .textarea-container {
+            padding-right: 32px; // Platz für Expand-Button
+
+            textarea {
+              overflow-y: auto;
+              line-height: 1.5;
+            }
+          }
+        }
+
+        .card-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 12px;
+
+          .left-actions, .right-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+        }
+      }
+    }
+  }
+
+  .state-msg {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    user-select: none;
+
+    .icon-wrapper {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: var(--bubble-other-bg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+      mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+        color: var(--bubble-me-bg); // Setzt einen schönen Farbakzent
+      }
+    }
+
+    h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    p {
+      margin: 0;
+      max-width: 380px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-sub);
+    }
+
+    /* Spezifische Nuance, wenn gerade ein Agent erstellt wird */
+    &.create-state {
+      .icon-wrapper {
+        border-color: var(--bubble-me-bg);
+        background-color: rgba(59, 130, 246, 0.08); // Leichtes Highlight im Akzent-Ton
+      }
+    }
+  }
+}
+
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  min-height: 20px;
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--mat-sys-primary, currentColor);
+    display: inline-block;
+    animation: typingWave 1.4s infinite ease-in-out both;
+
+    &:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    &:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0s;
+    }
+  }
+}
+
+@keyframes typingWave {
+  0%, 80%, 100% {
+    transform: scale(0.5);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

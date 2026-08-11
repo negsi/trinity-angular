@@ -1,0 +1,71 @@
+<nav class="slim-sidebar" [class.light-mode]="isLightMode()">
+  <!-- Compose Button -->
+  <button 
+    mat-mini-fab 
+    color="primary" 
+    class="compose-btn" 
+    matTooltip="Compose"
+    (click)="onCompose()"
+  >
+    <mat-icon>edit</mat-icon>
+  </button>
+
+  <mat-divider class="divider"></mat-divider>
+
+  <!-- Navigation Icons -->
+  <div class="nav-section">
+    <button mat-icon-button class="nav-item active" matTooltip="Inbox (12)">
+      <mat-icon>inbox</mat-icon>
+      <span class="dot-badge"></span>
+    </button>
+    <button mat-icon-button class="nav-item" matTooltip="Starred">
+      <mat-icon>star_border</mat-icon>
+    </button>
+    <button mat-icon-button class="nav-item" matTooltip="Snoozed">
+      <mat-icon>schedule</mat-icon>
+    </button>
+    <button mat-icon-button class="nav-item" matTooltip="Sent">
+      <mat-icon>send</mat-icon>
+    </button>
+    <button mat-icon-button class="nav-item" matTooltip="Drafts">
+      <mat-icon>insert_drive_file</mat-icon>
+    </button>
+    <button mat-icon-button class="nav-item" matTooltip="Spam">
+      <mat-icon>report_problem</mat-icon>
+    </button>
+    <button mat-icon-button class="nav-item" matTooltip="Trash">
+      <mat-icon>delete_outline</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider class="divider"></mat-divider>
+
+  <!-- Labels / Color Dots -->
+  <div class="nav-section labels">
+    <button mat-icon-button class="label-item" matTooltip="Work (42)">
+      <span class="color-dot work"></span>
+    </button>
+    <button mat-icon-button class="label-item" matTooltip="Team (28)">
+      <span class="color-dot team"></span>
+    </button>
+    <button mat-icon-button class="label-item" matTooltip="Finance (11)">
+      <span class="color-dot finance"></span>
+    </button>
+    <button mat-icon-button class="label-item" matTooltip="Invoices (6)">
+      <span class="color-dot invoices"></span>
+    </button>
+    <button mat-icon-button class="label-item" matTooltip="Travel (4)">
+      <span class="color-dot travel"></span>
+    </button>
+  </div>
+
+  <!-- Drückt den Toggle-Button ganz nach unten -->
+  <div class="spacer"></div>
+
+  <mat-divider class="divider"></mat-divider>
+
+  <!-- Theme Toggle Button ganz unten -->
+  <button mat-icon-button class="theme-toggle" (click)="onToggleTheme()" [matTooltip]="isLightMode() ? 'Dark Mode' : 'Light Mode'">
+    <mat-icon>{{ isLightMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
+  </button>
+</nav>

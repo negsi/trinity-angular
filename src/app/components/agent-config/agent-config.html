@@ -1,0 +1,165 @@
+<form class="config-container" [class.light-mode]="isLightMode()" (ngSubmit)="onSave()">
+
+  <div class="config-header">
+    <div class="header-title">
+      <h2>Agent Settings</h2>
+      <span class="active-badge">CONFIGURATION</span>
+    </div>
+  </div>
+
+  <div class="config-scroll-area">
+    <!-- Formular-Bereich oben -->
+    <div class="form-section">
+      <!-- NAME -->
+      <div class="field-row">
+        <label class="field-label">NAME</label>
+        <input 
+          #nameInput
+          type="text" 
+          class="custom-input" 
+          name="agentName"
+          [ngModel]="agentName()" 
+          (ngModelChange)="agentName.set($event)"
+          required
+        />
+      </div>
+
+      <!-- DESCR. -->
+      <div class="field-row">
+        <label class="field-label">DESCR.</label>
+        <textarea 
+          class="custom-textarea" 
+          rows="3"
+          name="agentDescription"
+          [ngModel]="agentDescription()" 
+          (ngModelChange)="agentDescription.set($event)"
+        ></textarea>
+      </div>
+
+      <!-- SKILLS (Visuell drin gelassen) 
+      <div class="field-row">
+        <label class="field-label">SKILLS</label>
+        <div class="skills-grid">
+          @for (skill of skills(); track skill.id) {
+            <button 
+              type="button" 
+              class="skill-pill" 
+              [class.selected]="skill.selected"
+              (click)="toggleSkill(skill.id)"
+            >
+              {{ skill.label }}
+            </button>
+          }
+        </div>
+      </div>-->
+    </div>
+
+    <!-- System Prompt / Editor Bereich -->
+    <div class="editor-section">
+      <!-- Editor Toolbar -->
+      <div class="editor-toolbar">
+        <div class="toolbar-left">
+          <span class="font-selector">Inter <mat-icon>expand_more</mat-icon></span>
+          <div class="toolbar-divider"></div>
+          <button type="button" class="tb-btn"><b>B</b></button>
+          <button type="button" class="tb-btn"><i>I</i></button>
+          <button type="button" class="tb-btn"><u>U</u></button>
+          <div class="toolbar-divider"></div>
+          <button type="button" class="tb-btn"><mat-icon>format_list_bulleted</mat-icon></button>
+          <button type="button" class="tb-btn"><mat-icon>format_list_numbered</mat-icon></button>
+          <button type="button" class="tb-btn"><mat-icon>link</mat-icon></button>
+          <button type="button" class="tb-btn"><mat-icon>code</mat-icon></button>
+          <button type="button" class="tb-btn"><mat-icon>format_quote</mat-icon></button>
+        </div>
+        <div class="toolbar-right">
+          <button type="button" class="tb-btn"><mat-icon>attach_file</mat-icon></button>
+          <button type="button" class="tb-btn"><mat-icon>image</mat-icon></button>
+        </div>
+      </div>
+
+      <!-- Prompt Textarea -->
+      <textarea 
+        class="prompt-textarea" 
+        name="systemPrompt"
+        [ngModel]="systemPrompt()" 
+        (ngModelChange)="systemPrompt.set($event)"
+        placeholder="Enter System Prompt..."
+      ></textarea>
+    </div>
+
+    <!-- DATASOURCES -->
+    <div class="datasources-section">
+      <div class="ds-header">
+        <div class="ds-header-left">
+          <mat-icon class="ds-icon">attach_file</mat-icon>
+          <span class="ds-label">DATASOURCES</span>
+          <span class="ds-dot">·</span>
+          <span class="ds-size">{{ dataSources().length }} Datei(en)</span>
+        </div>
+
+        <!-- Hidden Input für Dateiauswahl -->
+        <input 
+          #fileInput 
+          type="file" 
+          multiple 
+          (change)="onFilesSelected($event)" 
+          style="display: none" 
+        />
+
+        <!-- Upload Button -->
+        <button 
+          type="button" 
+          mat-button 
+          class="upload-btn" 
+          (click)="fileInput.click()" 
+          [disabled]="isUploading() || !agentService.selectedAgent()"
+        >
+          <mat-icon>cloud_upload</mat-icon>
+          {{ isUploading() ? 'Lädt...' : 'Datei anhängen' }}
+        </button>
+      </div>
+
+      <div class="ds-grid">
+        @for (file of dataSources(); track file.id) {
+          <div class="ds-card">
+            <div class="file-badge" [class]="file.type">
+              {{ file.type | uppercase }}
+            </div>
+            <div class="file-info">
+              <span class="file-name" [title]="file.name">{{ file.name }}</span>
+              <span class="file-size">{{ file.size }}</span>
+            </div>
+            <!-- Löschen-Button (X) -->
+            <button 
+              type="button" 
+              class="remove-ds-btn" 
+              (click)="removeDatasource(file.id)"
+              title="Datei entfernen">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        } @empty {
+          <div class="ds-empty">
+            <span>Keine Dateien verknüpft</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky Footer Buttons -->
+  <footer class="config-footer">
+    <button type="button" class="btn-schedule">
+      <mat-icon>schedule</mat-icon>
+      Schedule
+    </button>
+    <button type="button" class="btn-delete" title="Delete Agent" (click)="onDelete()">
+      <mat-icon>delete_outline</mat-icon>
+    </button>
+    <button type="submit" class="btn-save">
+      Save
+      <mat-icon>send</mat-icon>
+    </button>
+  </footer>
+
+</form>

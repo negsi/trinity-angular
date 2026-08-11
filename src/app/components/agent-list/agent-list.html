@@ -1,0 +1,60 @@
+<div class="agent-list-container" [class.light-mode]="isLightMode()" [class.collapsed]="isCollapsed()">
+  <div class="list-header">
+    <div class="header-title">
+      <h2>Direct</h2>
+      <span class="active-count">{{ agentService.agents().length }} ACTIVE</span>
+    </div>
+    
+    <button 
+      mat-mini-fab 
+      color="primary" 
+      class="compose-btn collapse-btn"
+      [matTooltip]="isCollapsed() ? 'Ausklappen' : 'Einklappen'"
+      (click)="toggleCollapse()"
+    >
+      <mat-icon>{{ isCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+    </button>
+  </div>
+
+  <div class="list-content">
+    @if (agentService.isLoading()) {
+      <div class="state-message">
+        <span class="full-text">Lade Agenten...</span>
+      </div>
+    } @else if (agentService.error()) {
+      <div class="state-message error">
+        <span class="full-text">{{ agentService.error() }}</span>
+      </div>
+    } @else {
+      @for (agent of agentService.agents(); track agent.id) {
+        <div 
+          class="agent-item" 
+          [class.selected]="agentService.selectedAgent()?.id === agent.id"
+          (click)="selectAgent(agent)"
+          [title]="isCollapsed() ? agent.name : ''"
+        >
+          <div 
+            class="avatar-badge" 
+            [style.background-color]="getAvatarBg(agent.name)"
+          >
+            {{ getInitials(agent.name) }}
+            <span class="status-indicator"></span>
+          </div>
+
+          <div class="agent-details">
+            <div class="agent-top">
+              <span class="agent-name">{{ agent.name }}</span>
+            </div>
+            <p class="agent-desc">
+              {{ agent.description || 'Keine Beschreibung hinterlegt' }}
+            </p>
+          </div>
+        </div>
+      } @empty {
+        <div class="state-message">
+          <span class="full-text">Keine Agenten gefunden.</span>
+        </div>
+      }
+    }
+  </div>
+</div>

@@ -1,0 +1,112 @@
+:host {
+  --bg-color: #0b1120;
+  --text-color: #94a3b8;
+  --active-bg: rgba(59, 130, 246, 0.15);
+  --active-color: #3b82f6;
+
+  &.light-mode {
+    --bg-color: #ffffff;
+    --text-color: #64748b;
+    --active-bg: #eff6ff;
+    --active-color: #2563eb;
+  }
+}
+
+.slim-sidebar {
+  // --- Dark Mode Standard ---
+  --bg-color: #0b1120;
+  --text-color: #94a3b8;
+  --active-bg: rgba(59, 130, 246, 0.15);
+  --active-color: #3b82f6;
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  // --- White Mode Overrides ---
+  &.light-mode {
+    --bg-color: #ffffff;             // Strahlendes Weiß
+    --text-color: #64748b;           // Schickes Schiefergrau für inaktive Icons
+    --active-bg: #eff6ff;            // Sanfter blauer Hintergrund für aktive Icons
+    --active-color: #2563eb;         // Kräftiges Blau für das aktive Icon
+    --border-color: rgba(0, 0, 0, 0.08); // Dezenter grauer Trennstrich nach rechts
+  }
+
+  width: 64px;
+  height: 100vh;
+  background-color: var(--bg-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  box-sizing: border-box;
+  border-right: 1px solid var(--border-color);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+
+  .compose-btn {
+    box-shadow: none;
+  }
+
+  .divider {
+    width: 32px;
+    margin: 12px 0;
+    opacity: 0.15;
+  }
+
+  .nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .nav-item {
+      color: var(--text-color);
+      position: relative;
+      border-radius: 12px;
+
+      &.active {
+        background-color: var(--active-bg);
+        color: var(--active-color);
+      }
+
+      .dot-badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 6px;
+        height: 6px;
+        background-color: #3b82f6;
+        border-radius: 50%;
+      }
+    }
+  }
+
+  .labels {
+    .label-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+
+      &.work { background-color: #3b82f6; }
+      &.team { background-color: #10b981; }
+      &.finance { background-color: #a855f7; }
+      &.invoices { background-color: #f59e0b; }
+      &.travel { background-color: #06b6d4; }
+    }
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .theme-toggle {
+    color: var(--text-color);
+    transition: color 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      transform: rotate(15deg);
+    }
+  }
+}

@@ -1,0 +1,98 @@
+:host {
+  display: block;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.workspace-container {
+  // --- Standard Dark Mode ---
+  --bg-main: #0b1120;
+  --bg-column: #0f172a;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  // --- Light Mode Übersteuerung ---
+  &.light-mode {
+    --bg-main: #ffffff;
+    --bg-column: #f8fafc;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  display: flex; // Auf Flexbox umgestellt für reibungsloses Resizing
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, color 0.25s ease;
+  overflow: hidden;
+
+  .column {
+    height: 100%;
+    border-right: 1px solid var(--border-color);
+    box-sizing: border-box;
+    transition: border-color 0.25s ease, background-color 0.25s ease;
+    overflow: hidden;
+
+    &.col-sidebar {
+      width: 64px;
+      flex-shrink: 0;
+    }
+
+    &.col-subnav {
+      width: fit-content; 
+      flex-shrink: 0;
+      background-color: var(--bg-column);
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); // Garantiert geschmeidige Animation
+    }
+
+    &.col-main {
+      flex: 1; // Füllt automatisch den Platz zwischen Spalte 2 und Spalte 4
+      min-width: 400px; // Verhindert, dass der Chat zu weit zusammengeschoben werden kann
+      border-right: none; // Trennung übernimmt der Resizer Handle direkt dahinter
+    }
+
+    &.col-details {
+      flex-shrink: 0;
+      border-right: none;
+    }
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  // --- Resizer Handle Bar ---
+  .resizer-handle {
+    width: 2px;
+    cursor: col-resize;
+    background-color: transparent;
+    border-left: 1px solid var(--border-color);
+    transition: background-color 0.2s ease, border-color 0.25s ease;
+    z-index: 10;
+    margin: 0 -2px; // Zieht die Interaktionszone mittig über die Spaltengrenze
+
+    &:hover,
+    &:active {
+      background-color: #3b82f6; // Blauer Highlight-Akzent beim Drüberfahren & Ziehen
+      border-left-color: transparent;
+    }
+  }
+
+  .placeholder-content {
+    padding: 24px;
+    font-family: Roboto, sans-serif;
+
+    h3 {
+      margin-top: 0;
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+    }
+  }
+}

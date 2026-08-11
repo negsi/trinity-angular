@@ -1,0 +1,186 @@
+.agent-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 320px; // Standardbreite festlegen
+  color: var(--text-primary);
+  user-select: none;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+
+  // --- COLLAPSED STATE ---
+  &.collapsed {
+    width: 60px;
+
+    .list-header {
+      padding: 11px 8px;
+      justify-content: center;
+
+      .header-title {
+        display: none; // Blendet "Direct" und Counter aus
+      }
+    }
+
+    .list-content {
+      .agent-item {
+        justify-content: center;
+        padding: 12px 0;
+
+        .agent-details {
+          display: none; // Blendet Namen und Beschreibung aus
+        }
+      }
+
+      .state-message .full-text {
+        display: none;
+      }
+    }
+  }
+
+  .list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--border-color);
+    transition: padding 0.3s ease;
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      white-space: nowrap;
+
+      h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .active-count {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        background-color: rgba(255, 255, 255, 0.05);
+        padding: 2px 8px;
+        border-radius: 12px;
+      }
+    }
+
+    .collapse-btn {
+      width: 40px !important;
+      height: 40px !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+    }
+  }
+
+  .list-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 0;
+
+    .state-message {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+
+      &.error {
+        color: #ef4444;
+      }
+    }
+
+    .agent-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background-color 0.15s ease, border-color 0.15s ease, padding 0.3s ease;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.03);
+      }
+
+      &.selected {
+        background-color: rgba(59, 130, 246, 0.1);
+        border-left-color: #3b82f6;
+
+        .agent-name {
+          color: #ffffff;
+          font-weight: 600;
+        }
+      }
+
+      .avatar-badge {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+
+        .status-indicator {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 10px;
+          height: 10px;
+          background-color: #10b981;
+          border: 2px solid var(--bg-column);
+          border-radius: 50%;
+        }
+      }
+
+      .agent-details {
+        flex: 1;
+        min-width: 0;
+
+        .agent-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          margin-bottom: 2px;
+
+          .agent-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        .agent-desc {
+          margin: 0;
+          font-size: 0.8rem;
+          color: var(--text-secondary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.3;
+        }
+      }
+    }
+  }
+}
