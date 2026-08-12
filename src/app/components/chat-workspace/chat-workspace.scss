@@ -38,7 +38,7 @@
 
   /* 1. STICKY HEADER */
   .chat-header {
-    height:62px;
+    height: 62px;
     padding: 0 24px;
     display: flex;
     align-items: center;
@@ -167,6 +167,17 @@
           font-size: 0.9rem;
           line-height: 1.45;
           word-break: break-word;
+
+          // Generelles Link-Styling innerhalb von Markdown/Bubbles
+          ::ng-deep a {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            transition: opacity 0.2s ease;
+
+            &:hover {
+              opacity: 0.8;
+            }
+          }
         }
 
         .meta {
@@ -185,7 +196,7 @@
           .message-actions {
             display: flex;
             align-items: center;
-            gap: 4px; // Etwas mehr Abstand zwischen den Buttons
+            gap: 4px;
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.2s ease, visibility 0.2s ease;
@@ -203,11 +214,9 @@
               border: none;
               cursor: pointer;
               
-              // Verhindert das Überlappen der Hitboxen / Material-Touch-Targets:
               position: relative !important;
               overflow: hidden !important;
 
-              // Setzt das Angular Material Ripple/Target exakt auf Button-Größe
               ::ng-deep .mat-mdc-button-touch-target,
               ::ng-deep .mat-mdc-button-persistent-ripple {
                 width: 22px !important;
@@ -223,14 +232,13 @@
                 width: 14px !important;
                 height: 14px !important;
                 line-height: 14px !important;
-                pointer-events: none; // Verhindert Hover-Flackern auf dem Icon
+                pointer-events: none;
               }
             }
           }
         }
       }
 
-      // Hover auf die komplette Message-Row blendet die Buttons ein
       &:hover {
         .message-actions {
           opacity: 1 !important;
@@ -247,6 +255,11 @@
           color: var(--bubble-other-text);
           border-bottom-left-radius: 4px;
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+          ::ng-deep a,
+          ::ng-deep a:visited {
+            color: var(--bubble-me-bg, #3b82f6) !important;
+          }
         }
       }
 
@@ -270,6 +283,12 @@
             background-color: var(--bubble-me-bg);
             color: var(--bubble-me-text);
             border-bottom-right-radius: 4px;
+
+            ::ng-deep a,
+            ::ng-deep a:visited {
+              color: #ffffff !important;
+              font-weight: 500;
+            }
           }
         }
       }
@@ -286,7 +305,7 @@
       bottom: 0;
       left: 0;
       right: 0;
-      top: 62px; // Unterhalb des Headers
+      top: 62px;
       z-index: 20;
       padding: 24px;
       display: flex;
@@ -341,7 +360,7 @@
       flex-direction: column;
       background-color: var(--input-bg);
       border: 1px solid var(--input-border);
-      border-radius: 28px; // Vollständige Pill-Form im Kompaktmodus
+      border-radius: 28px;
       padding: 6px 12px 6px 8px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -397,7 +416,7 @@
       }
 
       .card-footer {
-        display: none; // Im Kompaktmodus ausblenden
+        display: none;
       }
 
       .expand-btn {
@@ -432,7 +451,7 @@
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 12px;
-        padding-right: 30px; // Abstand zum Expand-Button
+        padding-right: 30px;
 
         .file-chip {
           display: flex;
@@ -509,11 +528,11 @@
 
           .attach-btn, 
           .inline-right-actions {
-            display: none; // Wandert im Card-Modus nach unten
+            display: none;
           }
 
           .textarea-container {
-            padding-right: 32px; // Platz für Expand-Button
+            padding-right: 32px;
 
             textarea {
               overflow-y: auto;
@@ -564,7 +583,7 @@
         font-size: 40px;
         width: 40px;
         height: 40px;
-        color: var(--bubble-me-bg); // Setzt einen schönen Farbakzent
+        color: var(--bubble-me-bg);
       }
     }
 
@@ -583,11 +602,10 @@
       color: var(--text-sub);
     }
 
-    /* Spezifische Nuance, wenn gerade ein Agent erstellt wird */
     &.create-state {
       .icon-wrapper {
         border-color: var(--bubble-me-bg);
-        background-color: rgba(59, 130, 246, 0.08); // Leichtes Highlight im Akzent-Ton
+        background-color: rgba(59, 130, 246, 0.08);
       }
     }
   }
