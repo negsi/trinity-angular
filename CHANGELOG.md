@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- refined chat message actions and chat layout
+
 ## [0.0.1] - 2026-08-11 
 
 ### Added

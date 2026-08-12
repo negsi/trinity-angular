@@ -141,6 +141,7 @@
       gap: 12px;
       align-items: flex-end;
       max-width: 70%;
+      position: relative;
 
       .avatar {
         width: 28px;
@@ -169,11 +170,73 @@
         }
 
         .meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0 4px;
           font-size: 0.7rem;
           color: var(--text-sub);
-          padding: 0 4px;
+
+          .meta-info {
+            display: flex;
+            align-items: center;
+          }
+
+          .message-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px; // Etwas mehr Abstand zwischen den Buttons
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+
+            button {
+              width: 22px !important;
+              height: 22px !important;
+              line-height: 22px !important;
+              padding: 0 !important;
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              color: var(--text-sub);
+              background: transparent;
+              border: none;
+              cursor: pointer;
+              
+              // Verhindert das Überlappen der Hitboxen / Material-Touch-Targets:
+              position: relative !important;
+              overflow: hidden !important;
+
+              // Setzt das Angular Material Ripple/Target exakt auf Button-Größe
+              ::ng-deep .mat-mdc-button-touch-target,
+              ::ng-deep .mat-mdc-button-persistent-ripple {
+                width: 22px !important;
+                height: 22px !important;
+              }
+
+              &:hover {
+                color: var(--text-main);
+              }
+
+              mat-icon {
+                font-size: 14px !important;
+                width: 14px !important;
+                height: 14px !important;
+                line-height: 14px !important;
+                pointer-events: none; // Verhindert Hover-Flackern auf dem Icon
+              }
+            }
+          }
         }
-      } 
+      }
+
+      // Hover auf die komplette Message-Row blendet die Buttons ein
+      &:hover {
+        .message-actions {
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+      }
 
       /* Nachrichten der Gegenseite (Left) */
       &:not(.me) {
@@ -195,14 +258,18 @@
         .message-content {
           align-items: flex-end;
 
+          .meta {
+            flex-direction: row-reverse;
+
+            .meta-info {
+              text-align: right;
+            }
+          }
+
           .bubble {
             background-color: var(--bubble-me-bg);
             color: var(--bubble-me-text);
             border-bottom-right-radius: 4px;
-          }
-
-          .meta {
-            text-align: right;
           }
         }
       }
