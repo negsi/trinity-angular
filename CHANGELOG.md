@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- adjust expanded input area height and positioning
+
 ### Changed
 
 ## [0.0.2] - 2026-08-12

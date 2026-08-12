@@ -29,6 +29,7 @@
     --divider-line: rgba(0, 0, 0, 0.08);
   }
 
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -302,20 +303,25 @@
 
     &.expanded {
       position: absolute;
+      top: 62px;
       bottom: 0;
       left: 0;
       right: 0;
-      top: 62px;
-      z-index: 20;
+      z-index: 10;
       padding: 24px;
       display: flex;
       flex-direction: column;
+      background-color: var(--bg-color);
 
       .gemini-input-card {
         flex: 1;
+        height: 100%;
+        width: 100%;
+        max-width: none;
         max-height: none;
         border-radius: 20px;
         padding: 16px 16px 12px 16px;
+        box-sizing: border-box;
 
         .input-row-container {
           flex: 1;
@@ -328,6 +334,7 @@
 
           .textarea-container {
             height: 100%;
+            width: 100%;
             padding-right: 32px;
 
             textarea {
