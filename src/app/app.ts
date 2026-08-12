@@ -18,6 +18,7 @@ import { ApiAgentService } from './services/agent.service';
   styleUrl: './app.scss'
 })
 export class AppComponent {
+  private readonly PANEL_WIDTH_KEY = 'trinity_right_panel_width';
 
   private agentService = inject(ApiAgentService);
   agentConfig = viewChild(AgentConfigComponent);
@@ -25,8 +26,20 @@ export class AppComponent {
   title = 'workspace-app';
   isLightMode = signal<boolean>(false);
 
-  rightPanelWidth = signal<number>(500);
+  // Initialer Wert aus localStorage (Fallback: 500px)
+  rightPanelWidth = signal<number>(this.getInitialPanelWidth());
   private isResizing = false;
+
+  private getInitialPanelWidth(): number {
+    const savedWidth = localStorage.getItem(this.PANEL_WIDTH_KEY);
+    if (savedWidth !== null) {
+      const parsed = parseInt(savedWidth, 10);
+      if (!isNaN(parsed) && parsed >= 350 && parsed <= 800) {
+        return parsed;
+      }
+    }
+    return 500;
+  }
 
   startResizing(event: MouseEvent) {
     this.isResizing = true;
@@ -45,14 +58,16 @@ export class AppComponent {
 
   @HostListener('window:mouseup')
   onMouseUp() {
-    this.isResizing = false;
+    if (this.isResizing) {
+      this.isResizing = false;
+      // Breite nach dem Ziehen im localStorage speichern
+      localStorage.setItem(this.PANEL_WIDTH_KEY, this.rightPanelWidth().toString());
+    }
   }
 
   toggleTheme() {
     this.isLightMode.update(mode => !mode);
   }
-
-  
 
   onCreateNewAgent() {
     this.agentService.clearSelection();

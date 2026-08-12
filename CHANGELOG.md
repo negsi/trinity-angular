@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.0.2] - 2026-08-12
+
+### Added
+
+- UI improvements
+- persist theme mode selection in local storage
+- persist sidebar collapsed state in local storage
+- persist right panel width in local storage
+
+### Changed
+
+- refined chat message actions and chat layout
+
 ## [0.0.1] - 2026-08-11 
 
 ### Added
@@ -20,5 +33,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.1...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.2...develop
+[0.0.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.2
 [0.0.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.1

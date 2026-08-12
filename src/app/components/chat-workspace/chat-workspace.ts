@@ -143,6 +143,17 @@ export class ChatWorkspaceComponent {
     return text.includes('\n') || (this.chatTextarea?.nativeElement ? this.chatTextarea.nativeElement.scrollHeight > 28 : false);
   }
 
+  private createMessagePayload(activeAgentId: string, text: string): SendMessageDto {
+    return {
+      conversation_id: activeAgentId,
+      sender_id: 'user-christian',
+      sender_type: 'user',
+      sender_name: 'Christian',
+      text: text,
+      recipient_id: activeAgentId
+    };
+  }
+
   sendMessage(): void {
     const text = this.currentInput().trim();
     const files = this.selectedFiles();
@@ -150,18 +161,11 @@ export class ChatWorkspaceComponent {
 
     if ((!text && files.length === 0) || !activeAgent) return;
 
-    const payload: SendMessageDto = {
-      conversation_id: activeAgent.id,
-      sender_id: 'user-christian',
-      sender_type: 'user',
-      sender_name: 'Christian',
-      text: text,
-      recipient_id: activeAgent.id
-    };
+    const payload = this.createMessagePayload(activeAgent.id, text);
 
     this.currentInput.set('');
     this.selectedFiles.set([]);
-    this.isExpanded.set(false); // Nach Senden ggf. wieder einklappen
+    this.isExpanded.set(false);
 
     if (this.chatTextarea?.nativeElement) {
       this.chatTextarea.nativeElement.style.height = 'auto';
@@ -208,5 +212,52 @@ export class ChatWorkspaceComponent {
     } else {
       return date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
+  }
+
+    // Entfernt Markdown-Syntax für "Copy as Text"
+  copyAsPlainText(markdownText: string): void {
+    if (!markdownText) return;
+
+    const plainText = markdownText
+      // 1. Codeblöcke & Inline-Code auflösen
+      .replace(/```[\s\S]*?```/g, (m) => m.replace(/```[a-z]*\n?/gi, '').replace(/```/g, ''))
+      .replace(/`([^`]+)`/g, '$1')
+      // 2. Links [Text](Url) -> Text
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+      // 3. Globale Formatierungszeichen (*, **, _, __, ~~) vorab säubern
+      .replace(/(\*\*|__|\*|_|~~)(.*?)\1/g, '$2')
+      .replace(/(\*\*|__|\*|_|~~)/g, '') // Sicherheitsnetz für verwaiste Sterne/Underscores
+      // 4. Zeile für Zeile säubern (Listen, Indents, Headers)
+      .split('\n')
+      .map(line => {
+        return line
+          // Führende Whitespaces, Tabs, Unicodes und Listen-Marker (*, -, +, 1.) entfernen
+          .replace(/^[\s\u00A0]*([\*\-\+]|\d+\.)[\s\u00A0]*/, '')
+          // Blockquotes (>) entfernen
+          .replace(/^[\s\u00A0]*>[\s\u00A0]*/, '')
+          // Überschriften (#) entfernen
+          .replace(/^#{1,6}\s+/, '')
+          .trim();
+      })
+      // Leerzeilen-Wildwuchs auffangen
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    navigator.clipboard.writeText(plainText);
+  }
+
+  // Kopiert den rohen Text inklusive Markdown
+  copyAsMarkdown(markdownText: string): void {
+    if (!markdownText) return;
+    navigator.clipboard.writeText(markdownText);
+  }
+
+  resendMessage(msgText: string): void {
+    const activeAgent = this.agentService.selectedAgent();
+    if (!activeAgent || !msgText) return;
+
+    const payload = this.createMessagePayload(activeAgent.id, msgText);
+    this.chatService.sendMessage(payload, activeAgent.name, []);
   }
 }
