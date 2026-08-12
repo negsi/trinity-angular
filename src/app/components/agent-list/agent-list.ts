@@ -14,11 +14,13 @@ import { Agent } from '../../models/agent.model';
   styleUrl: './agent-list.scss'
 })
 export class AgentListComponent implements OnInit {
+  private readonly COLLAPSE_KEY = 'trinity_agent_list_collapsed';
+
   // 1. Input Signal
   isLightMode = input.required<boolean>();
 
-  // 2. Collapse State Signal
-  isCollapsed = signal<boolean>(false);
+  // 2. Collapse State Signal (aus localStorage lesen)
+  isCollapsed = signal<boolean>(this.getInitialCollapseState());
 
   // 3. Public Service Inject
   public agentService = inject(ApiAgentService);
@@ -27,8 +29,17 @@ export class AgentListComponent implements OnInit {
     this.agentService.loadAgents();
   }
 
+  private getInitialCollapseState(): boolean {
+    const savedState = localStorage.getItem(this.COLLAPSE_KEY);
+    return savedState === 'true';
+  }
+
   toggleCollapse(): void {
-    this.isCollapsed.update(val => !val);
+    this.isCollapsed.update(val => {
+      const nextState = !val;
+      localStorage.setItem(this.COLLAPSE_KEY, String(nextState));
+      return nextState;
+    });
   }
 
   selectAgent(agent: Agent): void {

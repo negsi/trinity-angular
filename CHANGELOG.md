@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - UI improvements
 - persist theme mode selection in local storage
+- persist sidebar collapsed state in local storage
 
 ### Changed
 
