@@ -34,5 +34,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Application models
 
 [Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.2...develop
-[0.0.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.2
+[0.0.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.2
 [0.0.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.1
