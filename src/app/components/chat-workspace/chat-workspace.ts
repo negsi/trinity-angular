@@ -219,19 +219,29 @@ export class ChatWorkspaceComponent {
     if (!markdownText) return;
 
     const plainText = markdownText
-      // Codeblöcke & Inline-Code
+      // 1. Codeblöcke & Inline-Code auflösen
       .replace(/```[\s\S]*?```/g, (m) => m.replace(/```[a-z]*\n?/gi, '').replace(/```/g, ''))
       .replace(/`([^`]+)`/g, '$1')
-      // Überschriften
-      .replace(/^#{1,6}\s+/gm, '')
-      // Bold / Italic / Strikethrough
-      .replace(/(\*\*|__|\*|_|~~)(.*?)\1/g, '$2')
-      // Links [Text](Url) -> Text
+      // 2. Links [Text](Url) -> Text
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
-      // Blockquotes & Listen-Markierungen
-      .replace(/^\s*[\*\-\+]\s+/gm, '')
-      .replace(/^\s*\d+\.\s+/gm, '')
-      .replace(/^\s*>\s+/gm, '')
+      // 3. Globale Formatierungszeichen (*, **, _, __, ~~) vorab säubern
+      .replace(/(\*\*|__|\*|_|~~)(.*?)\1/g, '$2')
+      .replace(/(\*\*|__|\*|_|~~)/g, '') // Sicherheitsnetz für verwaiste Sterne/Underscores
+      // 4. Zeile für Zeile säubern (Listen, Indents, Headers)
+      .split('\n')
+      .map(line => {
+        return line
+          // Führende Whitespaces, Tabs, Unicodes und Listen-Marker (*, -, +, 1.) entfernen
+          .replace(/^[\s\u00A0]*([\*\-\+]|\d+\.)[\s\u00A0]*/, '')
+          // Blockquotes (>) entfernen
+          .replace(/^[\s\u00A0]*>[\s\u00A0]*/, '')
+          // Überschriften (#) entfernen
+          .replace(/^#{1,6}\s+/, '')
+          .trim();
+      })
+      // Leerzeilen-Wildwuchs auffangen
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
 
     navigator.clipboard.writeText(plainText);
