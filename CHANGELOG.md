@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- adjust expanded input area height and positioning
+### Changed
+
+## [0.0.3] - 2026-08-12
 
 ### Changed
+
+- adjust expanded input area height and positioning
 
 ## [0.0.2] - 2026-08-12
 
@@ -35,6 +39,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.2...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.3...develop
+[0.0.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.3
 [0.0.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.2
 [0.0.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.1
