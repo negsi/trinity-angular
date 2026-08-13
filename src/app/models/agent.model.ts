@@ -21,4 +21,9 @@ export interface Agent {
   skills: Skill[];
   datasources?: DataSource[];
   created_at?: string;
+
+  memory_enabled: boolean;
+  memory_mode: 'user_only' | 'all';
+  memory_limit_type: 'all' | 'message_count';
+  memory_message_count?: number | null;
 }
