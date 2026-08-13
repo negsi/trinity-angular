@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.0.4] - 2026-08-13
+
+### Added
+
+- Multi-conversation drawer to view, switch, and delete chat sessions
+- Auto-focus on chat input when starting a new conversation
+- Auto-load latest conversation when selecting an agent
+
+### Changed
+
+- Dynamic adoption of new conversation ID on first message
+- Auto-close conversation drawer upon session selection
+- Fixed layout centering for the delete action button
+
 ## [0.0.3] - 2026-08-12
 
 ### Changed
@@ -39,7 +53,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.3...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.4...develop
+[0.0.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.4
 [0.0.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.3
 [0.0.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.2
 [0.0.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.1

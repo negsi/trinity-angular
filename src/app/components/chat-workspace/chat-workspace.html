@@ -14,10 +14,18 @@
       </div>
 
       <div class="header-actions">
+        <!--
         <button mat-icon-button><mat-icon>phone</mat-icon></button>
         <button mat-icon-button><mat-icon>videocam</mat-icon></button>
         <button mat-icon-button><mat-icon>info</mat-icon></button>
         <button mat-icon-button><mat-icon>more_vert</mat-icon></button>
+        -->
+        <button mat-icon-button matTooltip="New Conversation" (click)="onNewConversation()">
+          <mat-icon>add_comment</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Show Conversations" (click)="toggleConversationsDrawer()">
+          <mat-icon>forum</mat-icon>
+        </button>
       </div>
     </header>
 
@@ -244,5 +252,15 @@
       <h3>Kein Agent ausgewählt</h3>
       <p>Wähle einen bestehenden Agenten aus der Liste links aus oder erstelle einen neuen.</p>
     </div>
-  }
+  } 
+
+  <app-conversation-drawer
+    [isOpen]="isDrawerOpen()"
+    [conversations]="conversationsList()"
+    [activeConversationId]="activeConversationId()"
+    (close)="isDrawerOpen.set(false)"
+    (selectConversation)="onSelectConversation($event)"
+    (deleteConversation)="onDeleteConversation($event)"
+  ></app-conversation-drawer>
 </div>
+

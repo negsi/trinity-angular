@@ -8,6 +8,7 @@ import { ApiAgentService } from '../../services/agent.service';
 import { ApiChatService } from '../../services/chat.service';
 import { SendMessageDto, MessageAttachment } from '../../models/message.model';
 import { MarkdownModule } from 'ngx-markdown';
+import { ConversationDrawer, ConversationUI } from '../conversation-drawer/conversation-drawer';
 
 export interface ChatMessageUI {
   id: string;
@@ -29,7 +30,15 @@ export interface MessageGroup {
 @Component({
   selector: 'app-chat-workspace',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule, MarkdownModule],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    MatIconModule, 
+    MatButtonModule, 
+    MatTooltipModule, 
+    MarkdownModule,
+    ConversationDrawer
+  ],
   templateUrl: './chat-workspace.html',
   styleUrl: './chat-workspace.scss'
 })
@@ -47,12 +56,35 @@ export class ChatWorkspaceComponent {
   selectedFiles = signal<File[]>([]);
   isExpanded = signal<boolean>(false); // Modus für großes Eingabefeld
 
+  // --- Drawer & Conversations Signals ---
+  isDrawerOpen = signal<boolean>(false);
+  conversationsList = signal<ConversationUI[]>([]);
+  activeConversationId = signal<string | null>(null);
+
   constructor() {
     effect(() => {
       const selected = this.agentService.selectedAgent();
-      if (selected) {
-        this.chatService.loadMessages(selected.id);
-      }
+      if (!selected) return;
+
+      this.chatService.getConversations(selected.id).subscribe({
+        next: (convs) => {
+          this.conversationsList.set(convs);
+
+          if (convs && convs.length > 0) {
+            const latestConv = convs[0];
+            this.activeConversationId.set(latestConv.id);
+            this.chatService.loadMessages(selected.id, latestConv.id);
+          } else {
+            this.activeConversationId.set(null);
+            this.chatService.clearMessages();
+          }
+        },
+        error: (err) => {
+          console.error('Fehler beim Laden der Konversationen des Agenten:', err);
+          this.activeConversationId.set(null);
+          this.chatService.clearMessages();
+        }
+      });
     });
 
     effect(() => {
@@ -60,6 +92,50 @@ export class ChatWorkspaceComponent {
       this.cdr.detectChanges();
       setTimeout(() => this.scrollToBottom(), 0);
     });
+  }
+
+  toggleConversationsDrawer(): void {
+    const nextState = !this.isDrawerOpen();
+    this.isDrawerOpen.set(nextState);
+
+    if (nextState) {
+      this.loadConversations();
+    }
+  }
+
+  loadConversations(): void {
+    const activeAgent = this.agentService.selectedAgent();
+    if (!activeAgent) return;
+
+    // Beispielhafter Call an den Service/Backend
+    // Passe den Aufruf an dein ApiChatService / ApiAgentService an, falls nötig
+    this.chatService.getConversations(activeAgent.id).subscribe({
+      next: (convs) => {
+        this.conversationsList.set(convs);
+      },
+      error: (err) => {
+        console.error('Fehler beim Laden der Konversationen:', err);
+      }
+    });
+  }
+
+  onSelectConversation(conversationId: string): void {
+    const activeAgent = this.agentService.selectedAgent();
+    if (!activeAgent) return;
+
+    this.activeConversationId.set(conversationId);
+    this.chatService.loadMessages(activeAgent.id, conversationId);
+
+    this.isDrawerOpen.set(false);
+  }
+
+  startNewConversation(): void {
+    const activeAgent = this.agentService.selectedAgent();
+    if (!activeAgent) return;
+
+    // Setzt die aktive Konversations-ID zurück/neu und leert die Nachrichten
+    this.activeConversationId.set(activeAgent.id);
+    this.chatService.clearMessages();
   }
 
   messageGroups = computed<MessageGroup[]>(() => {
@@ -145,7 +221,7 @@ export class ChatWorkspaceComponent {
 
   private createMessagePayload(activeAgentId: string, text: string): SendMessageDto {
     return {
-      conversation_id: activeAgentId,
+      conversation_id: this.activeConversationId() ?? undefined,
       sender_id: 'user-christian',
       sender_type: 'user',
       sender_name: 'Christian',
@@ -171,7 +247,11 @@ export class ChatWorkspaceComponent {
       this.chatTextarea.nativeElement.style.height = 'auto';
     }
 
-    this.chatService.sendMessage(payload, activeAgent.name, files);
+    // Callback setzt nach dem ersten Senden die neu erzeugte conversation_id
+    this.chatService.sendMessage(payload, activeAgent.name, files, (newConvId) => {
+      this.activeConversationId.set(newConvId);
+      this.loadConversations(); // Liste direkt neu laden!
+    });
   }
 
   getInitials(name: string): string {
@@ -214,7 +294,7 @@ export class ChatWorkspaceComponent {
     }
   }
 
-    // Entfernt Markdown-Syntax für "Copy as Text"
+  // Entfernt Markdown-Syntax für "Copy as Text"
   copyAsPlainText(markdownText: string): void {
     if (!markdownText) return;
 
@@ -259,5 +339,39 @@ export class ChatWorkspaceComponent {
 
     const payload = this.createMessagePayload(activeAgent.id, msgText);
     this.chatService.sendMessage(payload, activeAgent.name, []);
+  }
+
+  // chat-workspace.component.ts
+
+  // chat-workspace.component.ts
+
+  onDeleteConversation(conversationId: string): void {
+    const activeAgent = this.agentService.selectedAgent();
+    if (!activeAgent) return;
+
+    // Hier BEIDE IDs übergeben: activeAgent.id UND conversationId
+    this.chatService.deleteConversation(activeAgent.id, conversationId).subscribe({
+      next: () => {
+        // 1. Liste im UI aktualisieren
+        this.conversationsList.update(list => list.filter(c => c.id !== conversationId));
+
+        // 2. Falls die gelöschte Konversation gerade geladen war -> Workspace leeren
+        if (this.activeConversationId() === conversationId) {
+          this.activeConversationId.set(null);
+          this.chatService.clearMessages();
+        }
+      },
+      error: (err) => console.error('Fehler beim Löschen der Konversation:', err)
+    });
+  }
+
+  onNewConversation(): void {
+    this.activeConversationId.set(null);
+    this.chatService.clearMessages();
+    this.isDrawerOpen.set(false);
+
+    setTimeout(() => {
+      this.chatTextarea?.nativeElement?.focus();
+    }, 0);
   }
 }

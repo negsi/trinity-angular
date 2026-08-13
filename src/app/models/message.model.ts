@@ -22,7 +22,7 @@ export interface Message {
 }
 
 export interface SendMessageDto {
-  conversation_id: string;
+  conversation_id?: string;
   sender_id: string;
   sender_type: ActorType;
   sender_name: string;
