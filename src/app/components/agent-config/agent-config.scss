@@ -211,7 +211,7 @@
 
     .prompt-textarea {
       width: 100%;
-      min-height: 180px;
+      min-height: 130px;
       background: transparent;
       border: none;
       outline: none;
@@ -389,6 +389,77 @@
 
       &:hover {
         background-color: #1d4ed8;
+      }
+    }
+  }
+}
+
+.memory-section {
+  border-top: 1px solid var(--toolbar-border);
+  padding-top: 20px;
+
+  .memory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    .memory-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+
+      .memory-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  .memory-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+
+    .limit-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      width: 100%;
+
+      .custom-select {
+        flex: 1;
+      }
+
+      .count-input {
+        width: 80px;
+        flex-shrink: 0;
+        text-align: center;
+      }
+    }
+
+    .custom-select {
+      width: 100%;
+      box-sizing: border-box;
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      outline: none;
+
+      ::ng-deep .mat-mdc-select-value-text {
+        font-size: 0.8rem;
+        font-family: inherit;
+        color: var(--text-primary);
+      }
+
+      ::ng-deep .mat-mdc-select-arrow {
+        color: var(--text-muted);
       }
     }
   }

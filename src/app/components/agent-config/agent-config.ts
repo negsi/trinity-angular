@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSelectModule } from '@angular/material/select';
 import { ApiAgentService } from '../../services/agent.service';
 import { DatasourceService } from '../../services/datasource.service';
 import { Datasource } from '../../services/datasource.service';
@@ -17,7 +19,14 @@ export interface SkillOption {
 @Component({
   selector: 'app-agent-config',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    MatIconModule, 
+    MatButtonModule, 
+    MatSlideToggleModule,
+    MatSelectModule
+  ],
   templateUrl: './agent-config.html',
   styleUrl: './agent-config.scss'
 })
@@ -30,7 +39,13 @@ export class AgentConfigComponent {
   agentName = signal<string>('');
   agentDescription = signal<string>('');
   systemPrompt = signal<string>('');
-  
+
+  // Memory Signals
+  memoryEnabled = signal<boolean>(false);
+  memoryMode = signal<'user_only' | 'all'>('user_only');
+  memoryLimitType = signal<'all' | 'message_count'>('all');
+  memoryMessageCount = signal<number | null>(10);
+
   // State für den Upload-Status
   dataSources = signal<Datasource[]>([]);
   isUploading = signal<boolean>(false);
@@ -57,6 +72,12 @@ export class AgentConfigComponent {
         this.agentName.set(selected.name || '');
         this.agentDescription.set(selected.description || '');
         this.systemPrompt.set(selected.system_prompt || '');
+
+        // Memory Werte setzen
+        this.memoryEnabled.set(selected.memory_enabled ?? false);
+        this.memoryMode.set(selected.memory_mode || 'user_only');
+        this.memoryLimitType.set(selected.memory_limit_type || 'all');
+        this.memoryMessageCount.set(selected.memory_message_count ?? 10);
 
         const activeSystemNames = new Set(selected.skills?.map(s => s.system_name) || []);
         this.skills.update(list =>
@@ -88,9 +109,6 @@ export class AgentConfigComponent {
     );
   }
 
-  /**
-   * Wird aufgerufen, sobald der Nutzer Dateien auswählt
-   */
   onFilesSelected(event: Event): void {
     const selectedAgent = this.agentService.selectedAgent();
     if (!selectedAgent) {
@@ -104,13 +122,9 @@ export class AgentConfigComponent {
     const files = Array.from(input.files);
     this.uploadFiles(selectedAgent.id, files);
 
-    // Input für erneute Auswahl zurücksetzen
     input.value = '';
   }
 
-  /**
-   * Lädt die ausgewählten Dateien nacheinander über deine bestehende API hoch
-   */
   private uploadFiles(agentId: string, files: File[]): void {
     this.isUploading.set(true);
 
@@ -121,7 +135,6 @@ export class AgentConfigComponent {
 
       this.agentService.uploadDatasource(agentId, formData).subscribe({
         next: (res) => {
-          // Neues File zur Liste hinzufügen
           this.dataSources.update(current => [
             ...current,
             {
@@ -158,7 +171,11 @@ export class AgentConfigComponent {
       name: this.agentName(),
       description: this.agentDescription(),
       system_prompt: this.systemPrompt(),
-      skills: this.skills().filter(s => s.selected).map(s => s.systemName)
+      skills: this.skills().filter(s => s.selected).map(s => s.systemName),
+      memory_enabled: this.memoryEnabled(),
+      memory_mode: this.memoryMode(),
+      memory_limit_type: this.memoryLimitType(),
+      memory_message_count: this.memoryLimitType() === 'message_count' ? this.memoryMessageCount() : null
     };
 
     if (selected) {
@@ -187,6 +204,10 @@ export class AgentConfigComponent {
     this.agentName.set('');
     this.agentDescription.set('');
     this.systemPrompt.set('');
+    this.memoryEnabled.set(false);
+    this.memoryMode.set('user_only');
+    this.memoryLimitType.set('all');
+    this.memoryMessageCount.set(10);
     
     this.skills.update(skills => 
       skills.map(s => ({ ...s, selected: false }))
@@ -209,7 +230,6 @@ export class AgentConfigComponent {
 
     this.datasourceService.deleteDatasource(agentId, datasourceId).subscribe({
       next: () => {
-        // Erfolgreich gelöscht: Aus dem Signal filtern (UI aktualisiert sich automatisch)
         this.dataSources.update(sources => 
           sources.filter(ds => ds.id !== datasourceId)
         );

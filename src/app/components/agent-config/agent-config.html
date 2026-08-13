@@ -29,29 +29,12 @@
         <label class="field-label">DESCR.</label>
         <textarea 
           class="custom-textarea" 
-          rows="3"
+          rows="1"
           name="agentDescription"
           [ngModel]="agentDescription()" 
           (ngModelChange)="agentDescription.set($event)"
         ></textarea>
       </div>
-
-      <!-- SKILLS (Visuell drin gelassen) 
-      <div class="field-row">
-        <label class="field-label">SKILLS</label>
-        <div class="skills-grid">
-          @for (skill of skills(); track skill.id) {
-            <button 
-              type="button" 
-              class="skill-pill" 
-              [class.selected]="skill.selected"
-              (click)="toggleSkill(skill.id)"
-            >
-              {{ skill.label }}
-            </button>
-          }
-        </div>
-      </div>-->
     </div>
 
     <!-- System Prompt / Editor Bereich -->
@@ -81,6 +64,66 @@
       ></textarea>
     </div>
 
+    <!-- MEMORY SECTION -->
+    <div class="memory-section">
+      <div class="memory-header">
+        <div class="memory-title">
+          <mat-icon class="memory-icon">history</mat-icon>
+          <span class="memory-label">MEMORY & CONTEXT</span>
+        </div>
+        <mat-slide-toggle 
+          [checked]="memoryEnabled()" 
+          (change)="memoryEnabled.set($event.checked)"
+          color="primary">
+        </mat-slide-toggle>
+      </div>
+
+      @if (memoryEnabled()) {
+        <div class="memory-options">
+          <!-- MODE -->
+          <div class="field-row">
+            <label class="field-label">MODE</label>
+            <mat-select 
+              class="custom-select" 
+              [ngModel]="memoryMode()" 
+              (ngModelChange)="memoryMode.set($event)"
+              name="memoryMode">
+              <mat-option value="user_only">User Messages Only</mat-option>
+              <mat-option value="all">Full Conversation (User & Agent)</mat-option>
+            </mat-select>
+          </div>
+
+          <!-- LIMIT -->
+          <div class="field-row">
+            <label class="field-label">LIMIT</label>
+            <div class="limit-group">
+              <mat-select 
+                class="custom-select" 
+                [ngModel]="memoryLimitType()" 
+                (ngModelChange)="memoryLimitType.set($event)"
+                name="memoryLimitType">
+                <mat-option value="all">Unlimited History</mat-option>
+                <mat-option value="message_count">Last N Messages</mat-option>
+              </mat-select>
+
+              @if (memoryLimitType() === 'message_count') {
+                <input 
+                  type="number" 
+                  class="custom-input count-input" 
+                  name="memoryMessageCount"
+                  [ngModel]="memoryMessageCount()" 
+                  (ngModelChange)="memoryMessageCount.set($event)"
+                  min="1"
+                  max="100"
+                  placeholder="Count"
+                />
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
     <!-- DATASOURCES -->
     <div class="datasources-section">
       <div class="ds-header">
@@ -91,7 +134,6 @@
           <span class="ds-size">{{ dataSources().length }} Datei(en)</span>
         </div>
 
-        <!-- Hidden Input für Dateiauswahl -->
         <input 
           #fileInput 
           type="file" 
@@ -100,7 +142,6 @@
           style="display: none" 
         />
 
-        <!-- Upload Button -->
         <button 
           type="button" 
           mat-button 
@@ -123,7 +164,6 @@
               <span class="file-name" [title]="file.name">{{ file.name }}</span>
               <span class="file-size">{{ file.size }}</span>
             </div>
-            <!-- Löschen-Button (X) -->
             <button 
               type="button" 
               class="remove-ds-btn" 

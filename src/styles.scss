@@ -36,6 +36,7 @@ body {
   margin: 0;
   height: 100%;
 }
+
 /* You can add global styles to this file, and also import other style files */
 html, body {
   height: 100%;
@@ -43,6 +44,74 @@ html, body {
   padding: 0;
   overflow: hidden;
   background-color: #0b1120;
+}
+
+/* --- Global Theme Variables for Overlays / Portals --- */
+:root {
+  --overlay-bg: #0f172a;
+  --overlay-text: #f8fafc;
+  --overlay-border: rgba(255, 255, 255, 0.1);
+  --overlay-hover: rgba(255, 255, 255, 0.05);
+}
+
+body:has(.light-mode),
+.light-mode {
+  --overlay-bg: #ffffff;
+  --overlay-text: #0f172a;
+  --overlay-border: rgba(0, 0, 0, 0.1);
+  --overlay-hover: rgba(0, 0, 0, 0.05);
+}
+
+/* --- Angular Material Popover & Select Overlay Overrides --- */
+
+/* Native Popover Layer neutralisieren */
+[popover].cdk-overlay-popover,
+.cdk-overlay-pane {
+  background-color: transparent !important;
+}
+
+/* Das Panel selbst stylen */
+.mat-mdc-select-panel {
+  background-color: var(--overlay-bg) !important;
+  border: 1px solid var(--overlay-border) !important;
+  border-radius: 8px !important;
+  padding: 4px 0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+
+  /* Einzelne Optionen styling */
+  mat-option.mat-mdc-option {
+    min-height: 32px !important;
+    height: 32px !important;
+    background-color: transparent !important;
+
+    .mdc-list-item__primary-text {
+      font-size: 0.8rem !important;
+      font-family: inherit !important;
+      color: var(--overlay-text) !important;
+      line-height: 32px !important;
+    }
+
+    /* Checkmark Icon */
+    .mat-pseudo-checkbox {
+      color: #3b82f6 !important;
+    }
+
+    /* Hover & Active/Focus State */
+    &:hover:not(.mdc-list-item--disabled),
+    &:focus:not(.mdc-list-item--disabled),
+    &.mat-mdc-option-active {
+      background-color: var(--overlay-hover) !important;
+    }
+
+    /* Ausgewählte Option */
+    &.mdc-list-item--selected {
+      background-color: rgba(59, 130, 246, 0.2) !important;
+
+      .mdc-list-item__primary-text {
+        color: #60a5fa !important;
+      }
+    }
+  }
 }
 
 /* --- Custom Modern Scrollbars --- */
