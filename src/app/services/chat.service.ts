@@ -1,6 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { Message, SendMessageDto } from '../models/message.model';
+import { ConversationUI } from '../components/conversation-drawer/conversation-drawer';
 
 @Injectable({
   providedIn: 'root'
@@ -8,19 +10,48 @@ import { Message, SendMessageDto } from '../models/message.model';
 export class ApiChatService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/v1/chat';
+  private readonly agentsUrl = '/api/v1/agents';
 
   readonly messages = signal<Message[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly isStreaming = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
-  loadMessages(conversationId: string): void {
-    if (!conversationId) return;
+  /**
+   * Leert die aktuell geladenen Nachrichten im Signal.
+   */
+  clearMessages(): void {
+    this.messages.set([]);
+    this.error.set(null);
+  }
+
+  /**
+   * Lädt alle Konversationen für einen bestimmten Agenten.
+   */
+  getConversations(agentId: string): Observable<ConversationUI[]> {
+    return this.http.get<ConversationUI[]>(`${this.agentsUrl}/${agentId}/conversations`);
+  }
+
+  /**
+   * Löscht eine Konversation anhand ihrer ID.
+   */
+  deleteConversation(agentId: string, conversationId: string): Observable<void> {
+    if (!agentId || !conversationId) {
+      throw new Error('agentId und conversationId müssen übergeben werden.');
+    }
+
+    // Ruft jetzt /api/v1/agents/<agent_id>/conversations/<conversation_id> auf
+    return this.http.delete<void>(`${this.agentsUrl}/${agentId}/conversations/${conversationId}`);
+  }
+
+  loadMessages(agentId: string, conversationId: string, limit: number = 50): void {
+    if (!conversationId || !agentId) return;
 
     this.isLoading.set(true);
     this.error.set(null);
 
-    this.http.get<Message[]>(`${this.baseUrl}/conversations/${conversationId}/messages`).subscribe({
+    // Neuer Pfad über die agents.py Route:
+    this.http.get<Message[]>(`${this.agentsUrl}/${agentId}/conversations/${conversationId}/history?limit=${limit}`).subscribe({
       next: (data) => {
         this.messages.set(data);
         this.isLoading.set(false);
@@ -33,13 +64,15 @@ export class ApiChatService {
     });
   }
 
-  sendMessage(dto: SendMessageDto, agentName: string, files: File[] = []): void {
+  sendMessage(dto: SendMessageDto, agentName: string, files: File[] = [], onNewConvCreated?: (newId: string) => void): void {
     let payload: SendMessageDto | FormData = dto;
 
-    // Bei vorhandenen Dateien Payload als Multipart FormData übertragen
     if (files.length > 0) {
       const formData = new FormData();
-      if (dto.conversation_id) formData.append('conversation_id', dto.conversation_id);
+      // 💡 Nur anhängen, wenn eine conversation_id existiert!
+      if (dto.conversation_id) {
+        formData.append('conversation_id', dto.conversation_id);
+      }
       formData.append('sender_id', dto.sender_id);
       formData.append('sender_type', dto.sender_type);
       formData.append('sender_name', dto.sender_name);
@@ -56,6 +89,11 @@ export class ApiChatService {
     this.http.post<Message>(`${this.baseUrl}/messages`, payload).subscribe({
       next: (savedUserMsg) => {
         this.messages.update(prev => [...prev, savedUserMsg]);
+
+        // Callback ausführen, falls eine neue Conversation gestartet wurde
+        if (onNewConvCreated && savedUserMsg.conversation_id) {
+          onNewConvCreated(savedUserMsg.conversation_id);
+        }
 
         this.streamAgentResponse(
           dto.text,

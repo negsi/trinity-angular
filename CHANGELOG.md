@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Multi-conversation drawer to view, switch, and delete chat sessions
+- Auto-focus on chat input when starting a new conversation
+- Auto-load latest conversation when selecting an agent
+
 ### Changed
+
+- Dynamic adoption of new conversation ID on first message
+- Auto-close conversation drawer upon session selection
+- Fixed layout centering for the delete action button
 
 ## [0.0.3] - 2026-08-12
 

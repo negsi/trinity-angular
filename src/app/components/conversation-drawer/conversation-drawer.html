@@ -1,0 +1,44 @@
+<div class="drawer-overlay" [class.open]="isOpen()" (click)="close.emit()"></div>
+
+<aside class="conversation-drawer" [class.open]="isOpen()">
+  <header class="drawer-header">
+    <div class="header-title">
+      <mat-icon>forum</mat-icon>
+      <h3>Konversationen</h3>
+    </div>
+    <button mat-icon-button (click)="close.emit()" matTooltip="Schließen">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="drawer-content">
+    @for (conv of conversations(); track conv.id) {
+      <div 
+        class="conv-item" 
+        [class.active]="conv.id === activeConversationId()"
+        (click)="onSelect(conv.id)"
+      >
+        <div class="conv-icon">
+          <mat-icon>chat_bubble_outline</mat-icon>
+        </div>
+        <div class="conv-info">
+          <span class="conv-title">{{ conv.title || 'Unbenannte Konversation' }}</span>
+          <span class="conv-date">{{ formatDate(conv.created_at) }}</span>
+        </div>
+        <button 
+          mat-icon-button 
+          class="delete-btn" 
+          matTooltip="Löschen" 
+          (click)="onDelete($event, conv.id)"
+        >
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <mat-icon>history</mat-icon>
+        <p>Keine vorherigen Konversationen gefunden.</p>
+      </div>
+    }
+  </div>
+</aside>
