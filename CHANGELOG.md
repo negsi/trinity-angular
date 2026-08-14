@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- fullscreen mode for chat workspace
+
 ### Changed
 
 ## [0.0.5] - 2026-08-13

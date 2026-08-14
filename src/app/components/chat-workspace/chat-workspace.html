@@ -1,4 +1,7 @@
-<div class="chat-workspace" [class.light-mode]="isLightMode()">
+<div class="chat-workspace" 
+     [class.light-mode]="isLightMode()"
+     [class.is-fullscreen]="isFullscreen()"
+>
   @if (agentService.selectedAgent(); as activeAgent) {
     <!-- Sticky Header oben -->
     <header class="chat-header">
@@ -9,22 +12,23 @@
         </div>
         <div class="user-meta">
           <h3>{{ activeAgent.name }}</h3>
-          <span class="status-text">Active now</span>
+          <span class="status-text">{{ activeAgent.description }}</span>
         </div>
       </div>
 
       <div class="header-actions">
-        <!--
-        <button mat-icon-button><mat-icon>phone</mat-icon></button>
-        <button mat-icon-button><mat-icon>videocam</mat-icon></button>
-        <button mat-icon-button><mat-icon>info</mat-icon></button>
-        <button mat-icon-button><mat-icon>more_vert</mat-icon></button>
-        -->
         <button mat-icon-button matTooltip="New Conversation" (click)="onNewConversation()">
           <mat-icon>add_comment</mat-icon>
         </button>
         <button mat-icon-button matTooltip="Show Conversations" (click)="toggleConversationsDrawer()">
           <mat-icon>forum</mat-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          [matTooltip]="isFullscreen() ? 'Vollbild beenden' : 'Vollbildmodus'" 
+          (click)="toggleFullscreen()"
+        >
+          <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
         </button>
       </div>
     </header>

@@ -61,6 +61,9 @@ export class ChatWorkspaceComponent {
   conversationsList = signal<ConversationUI[]>([]);
   activeConversationId = signal<string | null>(null);
 
+  // Signal für den Vollbild-Zustand des Chat-Workspaces
+  isFullscreen = signal<boolean>(false);
+
   constructor() {
     effect(() => {
       const selected = this.agentService.selectedAgent();
@@ -92,6 +95,10 @@ export class ChatWorkspaceComponent {
       this.cdr.detectChanges();
       setTimeout(() => this.scrollToBottom(), 0);
     });
+  }
+
+  toggleFullscreen(): void {
+    this.isFullscreen.update(v => !v);
   }
 
   toggleConversationsDrawer(): void {
