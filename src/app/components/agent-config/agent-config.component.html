@@ -8,13 +8,14 @@
   </div>
 
   <div class="config-scroll-area">
-    <!-- Formular-Bereich oben -->
+    <!-- Form Fields -->
     <div class="form-section">
       <!-- NAME -->
       <div class="field-row">
-        <label class="field-label">NAME</label>
+        <label class="field-label" for="agentNameInput">NAME</label>
         <input 
           #nameInput
+          id="agentNameInput"
           type="text" 
           class="custom-input" 
           name="agentName"
@@ -26,8 +27,9 @@
 
       <!-- DESCR. -->
       <div class="field-row">
-        <label class="field-label">DESCR.</label>
+        <label class="field-label" for="agentDescInput">DESCR.</label>
         <textarea 
+          id="agentDescInput"
           class="custom-textarea" 
           rows="1"
           name="agentDescription"
@@ -37,9 +39,8 @@
       </div>
     </div>
 
-    <!-- System Prompt / Editor Bereich -->
+    <!-- System Prompt / Editor Section -->
     <div class="editor-section">
-      <!-- Editor Toolbar -->
       <div class="editor-toolbar">
         <div class="toolbar-left">
           <button type="button" class="tb-btn"><b>B</b></button>
@@ -54,7 +55,6 @@
         </div>
       </div>
 
-      <!-- Prompt Textarea -->
       <textarea 
         class="prompt-textarea" 
         name="systemPrompt"

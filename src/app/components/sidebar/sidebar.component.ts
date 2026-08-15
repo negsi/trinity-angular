@@ -5,29 +5,31 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiAgentService } from '../../services/agent.service';
 
+/**
+ * Main application navigation sidebar.
+ */
 @Component({
   selector: 'app-sidebar',
   standalone: true,
   imports: [MatButtonModule, MatIconModule, MatDividerModule, MatTooltipModule],
-  templateUrl: './sidebar.html',
-  styleUrl: './sidebar.scss'
+  templateUrl: './sidebar.component.html',
+  styleUrl: './sidebar.component.scss'
 })
 export class SidebarComponent implements OnInit {
   private readonly THEME_KEY = 'trinity_theme_mode';
+  private readonly agentService = inject(ApiAgentService);
 
-  isLightMode = input.required<boolean>();
-  themeToggle = output<void>();
+  /** Whether the application is running in light mode */
+  readonly isLightMode = input.required<boolean>();
 
-  agentService = inject(ApiAgentService);
-  
-  // 1. Neues Event zum Erstellen eines neuen Agenten
-  createNewAgent = output<void>();
+  /** Event emitted when the theme toggle is pressed */
+  readonly themeToggle = output<void>();
+
+  /** Event emitted when requesting agent creation */
+  readonly createNewAgent = output<void>();
 
   ngOnInit(): void {
     const savedTheme = localStorage.getItem(this.THEME_KEY);
-    
-    // Falls ein Wert im Storage liegt, der vom aktuellen App-State abweicht,
-    // triggern wir initial einmal das Toggle-Event zum Synchronisieren.
     if (savedTheme !== null) {
       const isSavedLight = savedTheme === 'light';
       if (isSavedLight !== this.isLightMode()) {
@@ -36,13 +38,18 @@ export class SidebarComponent implements OnInit {
     }
   }
 
+  /**
+   * Toggles the UI color theme and persists the user preference.
+   */
   onToggleTheme(): void {
     const nextState = !this.isLightMode();
     localStorage.setItem(this.THEME_KEY, nextState ? 'light' : 'dark');
     this.themeToggle.emit();
   }
 
-  // 2. Klick-Handler für den Compose-Button
+  /**
+   * Handles initiating creation of a new agent.
+   */
   onCompose(): void {
     this.createNewAgent.emit();
     this.agentService.startCreating();

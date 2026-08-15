@@ -1,6 +1,9 @@
-<div class="chat-workspace" [class.light-mode]="isLightMode()">
+<div class="chat-workspace" 
+     [class.light-mode]="isLightMode()"
+     [class.is-fullscreen]="isFullscreen()"
+>
   @if (agentService.selectedAgent(); as activeAgent) {
-    <!-- Sticky Header oben -->
+    <!-- Sticky Header -->
     <header class="chat-header">
       <div class="header-user">
         <div class="avatar" [style.background-color]="getAvatarBg(activeAgent.name)">
@@ -9,27 +12,28 @@
         </div>
         <div class="user-meta">
           <h3>{{ activeAgent.name }}</h3>
-          <span class="status-text">Active now</span>
+          <span class="status-text">{{ activeAgent.description }}</span>
         </div>
       </div>
 
       <div class="header-actions">
-        <!--
-        <button mat-icon-button><mat-icon>phone</mat-icon></button>
-        <button mat-icon-button><mat-icon>videocam</mat-icon></button>
-        <button mat-icon-button><mat-icon>info</mat-icon></button>
-        <button mat-icon-button><mat-icon>more_vert</mat-icon></button>
-        -->
         <button mat-icon-button matTooltip="New Conversation" (click)="onNewConversation()">
           <mat-icon>add_comment</mat-icon>
         </button>
         <button mat-icon-button matTooltip="Show Conversations" (click)="toggleConversationsDrawer()">
           <mat-icon>forum</mat-icon>
         </button>
+        <button 
+          mat-icon-button 
+          [matTooltip]="isFullscreen() ? 'Vollbild beenden' : 'Vollbildmodus'" 
+          (click)="toggleFullscreen()"
+        >
+          <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+        </button>
       </div>
     </header>
 
-    <!-- Scrollbarer Nachrichtenbereich -->
+    <!-- Scrollable Messages Area -->
     <div class="messages-container" #scrollContainer>
       @if (chatService.isLoading()) {
         <div class="state-msg">Lade Nachrichten...</div>
@@ -43,13 +47,11 @@
 
           @for (msg of group.messages; track msg.id) {
             <div class="message-row" [class.me]="msg.sender === 'me'">
-              <!-- Avatar (so wie vorher) -->
               <div class="avatar" [style.background-color]="msg.avatarBg">
                 {{ msg.avatarInitials }}
               </div>
 
               <div class="message-content">
-                <!-- Bubble -->
                 <div class="bubble">
                   @if (chatService.isStreaming() && !msg.text) {
                     <div class="typing-dots">
@@ -73,7 +75,7 @@
                   }
                 </div>
 
-                <!-- Footer Meta-Zeile (Uhrzeit + Action Buttons) -->
+                <!-- Footer Metadata & Action Buttons -->
                 <div class="meta">
                   <div class="meta-info">
                     <span class="time">{{ msg.time }}</span>
@@ -82,7 +84,6 @@
                     }
                   </div>
 
-                  <!-- Action Buttons (beim Hover sichtbar) -->
                   <div class="message-actions">
                     <button 
                       mat-icon-button 
@@ -129,12 +130,11 @@
       }
     </div>
 
-    <!-- Gemini-Style Chat Eingabefeld unten -->
+    <!-- Gemini-Style Input Area -->
     <footer class="chat-input-area" [class.expanded]="isExpanded()">
-      <div class="gemini-input-card" [class.is-multiline]="isMultiLine || selectedFiles().length > 0">
+      <div class="gemini-input-card" [class.is-multiline]="isMultiLine() || selectedFiles().length > 0">
         
-        <!-- Expand / Collapse Button: NUR sichtbar bei mehrzeiligem Inhalt / Files oder im Vollbild -->
-        @if (isMultiLine || selectedFiles().length > 0 || isExpanded()) {
+        @if (isMultiLine() || selectedFiles().length > 0 || isExpanded()) {
           <button 
             type="button" 
             class="expand-btn" 
@@ -145,7 +145,6 @@
           </button>
         }
 
-        <!-- Dateivorschauen (falls vorhanden) -->
         @if (selectedFiles().length > 0) {
           <div class="file-previews">
             @for (file of selectedFiles(); track file.name; let idx = $index) {
@@ -160,7 +159,6 @@
           </div>
         }
 
-        <!-- Verstecktes File-Input -->
         <input 
           type="file" 
           #fileInput 
@@ -169,14 +167,11 @@
           (change)="onFilesSelected($event)" 
         />
 
-        <!-- Layout Container -->
         <div class="input-row-container">
-          <!-- Plus-Button immer links -->
           <button mat-icon-button class="action-btn attach-btn" (click)="fileInput.click()" type="button" matTooltip="Datei anhängen">
             <mat-icon>add</mat-icon>
           </button>
 
-          <!-- Textarea Bereich -->
           <div class="textarea-container">
             <textarea 
               #chatTextarea
@@ -188,7 +183,6 @@
             ></textarea>
           </div>
 
-          <!-- Actions rechts im einzeiligen Modus -->
           <div class="inline-right-actions">
             <button mat-icon-button class="action-btn" type="button"><mat-icon>mic</mat-icon></button>
             @if (currentInput().trim() || selectedFiles().length > 0) {
@@ -207,7 +201,6 @@
 
         <div class="card-footer">
           <div class="left-actions">
-            <!-- Hier das Plus-Icon für den mehrzeiligen Zustand einfügen -->
             <button 
               mat-icon-button 
               class="action-btn" 
@@ -263,4 +256,3 @@
     (deleteConversation)="onDeleteConversation($event)"
   ></app-conversation-drawer>
 </div>
-

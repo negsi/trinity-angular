@@ -7,52 +7,52 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
 import { ApiAgentService } from '../../services/agent.service';
 import { DatasourceService } from '../../services/datasource.service';
-import { Datasource } from '../../services/datasource.service';
+import { DatasourceUI, DatasourceUploadResponse } from '../../models/datasource.model';
+import { SkillOption, CreateAgentDto, UpdateAgentDto } from '../../models/agent.model';
+import { formatBytes, determineFileType } from '../../utils/file.util';
 
-export interface SkillOption {
-  id: string;
-  label: string;
-  systemName: string;
-  selected: boolean;
-}
-
+/**
+ * Settings and configuration panel for customizing AI agents.
+ */
 @Component({
   selector: 'app-agent-config',
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    MatIconModule, 
-    MatButtonModule, 
+    CommonModule,
+    FormsModule,
+    MatIconModule,
+    MatButtonModule,
     MatSlideToggleModule,
     MatSelectModule
   ],
-  templateUrl: './agent-config.html',
-  styleUrl: './agent-config.scss'
+  templateUrl: './agent-config.component.html',
+  styleUrl: './agent-config.component.scss'
 })
 export class AgentConfigComponent {
-  isLightMode = input.required<boolean>();
-  private datasourceService = inject(DatasourceService);
-  agentService = inject(ApiAgentService);
+  /** Mode indicator signal */
+  readonly isLightMode = input.required<boolean>();
 
-  // Formular-Signals
-  agentName = signal<string>('');
-  agentDescription = signal<string>('');
-  systemPrompt = signal<string>('');
+  private readonly datasourceService = inject(DatasourceService);
+  readonly agentService = inject(ApiAgentService);
 
-  // Memory Signals
-  memoryEnabled = signal<boolean>(false);
-  memoryMode = signal<'user_only' | 'all'>('user_only');
-  memoryLimitType = signal<'all' | 'message_count'>('all');
-  memoryMessageCount = signal<number | null>(10);
+  /** Reference to the agent name text input */
+  readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
-  // State für den Upload-Status
-  dataSources = signal<Datasource[]>([]);
-  isUploading = signal<boolean>(false);
+  // Reactive Form State Signals
+  readonly agentName = signal<string>('');
+  readonly agentDescription = signal<string>('');
+  readonly systemPrompt = signal<string>('');
+  readonly memoryEnabled = signal<boolean>(false);
+  readonly memoryMode = signal<'user_only' | 'all'>('user_only');
+  readonly memoryLimitType = signal<'all' | 'message_count'>('all');
+  readonly memoryMessageCount = signal<number | null>(10);
 
-  nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
+  /** Upload status and datasource items signals */
+  readonly dataSources = signal<DatasourceUI[]>([]);
+  readonly isUploading = signal<boolean>(false);
 
-  skills = signal<SkillOption[]>([
+  /** Available skills configuration */
+  readonly skills = signal<SkillOption[]>([
     { id: '1', label: 'Fetch URL', systemName: 'fetch_url', selected: false },
     { id: '2', label: 'Run Container', systemName: 'run_container', selected: false },
     { id: '3', label: 'Use Terminal', systemName: 'use_terminal', selected: false },
@@ -72,28 +72,28 @@ export class AgentConfigComponent {
         this.agentName.set(selected.name || '');
         this.agentDescription.set(selected.description || '');
         this.systemPrompt.set(selected.system_prompt || '');
-
-        // Memory Werte setzen
         this.memoryEnabled.set(selected.memory_enabled ?? false);
         this.memoryMode.set(selected.memory_mode || 'user_only');
         this.memoryLimitType.set(selected.memory_limit_type || 'all');
         this.memoryMessageCount.set(selected.memory_message_count ?? 10);
 
-        const activeSystemNames = new Set(selected.skills?.map(s => s.system_name) || []);
-        this.skills.update(list =>
-          list.map(s => ({
+        const activeSystemNames = new Set(selected.skills?.map((s) => s.system_name) || []);
+        this.skills.update((list) =>
+          list.map((s) => ({
             ...s,
             selected: activeSystemNames.has(s.systemName)
           }))
         );
 
-        if (selected.datasources) {
+        if (selected.datasources && selected.datasources.length > 0) {
           this.dataSources.set(
-            selected.datasources.map(ds => ({
+            selected.datasources.map((ds) => ({
               id: ds.id,
               name: ds.name || ds.filename || 'Unbenannt',
-              size: this.formatBytes(ds.file_size),
-              type: this.determineFileType(ds.filename)
+              size: formatBytes(ds.file_size),
+              type: determineFileType(ds.filename),
+              filename: ds.filename,
+              file_size: ds.file_size
             }))
           );
         } else {
@@ -103,16 +103,22 @@ export class AgentConfigComponent {
     });
   }
 
+  /**
+   * Toggles the selection status of a skill pill.
+   */
   toggleSkill(skillId: string): void {
-    this.skills.update(list =>
-      list.map(s => (s.id === skillId ? { ...s, selected: !s.selected } : s))
+    this.skills.update((list) =>
+      list.map((s) => (s.id === skillId ? { ...s, selected: !s.selected } : s))
     );
   }
 
+  /**
+   * Triggers upload processing for selected files.
+   */
   onFilesSelected(event: Event): void {
     const selectedAgent = this.agentService.selectedAgent();
     if (!selectedAgent) {
-      console.warn('Kein Agent ausgewählt. Speichere den Agenten zuerst.');
+      console.warn('No agent selected. Please create or select an agent first.');
       return;
     }
 
@@ -121,7 +127,6 @@ export class AgentConfigComponent {
 
     const files = Array.from(input.files);
     this.uploadFiles(selectedAgent.id, files);
-
     input.value = '';
   }
 
@@ -134,72 +139,68 @@ export class AgentConfigComponent {
       formData.append('name', file.name);
 
       this.agentService.uploadDatasource(agentId, formData).subscribe({
-        next: (res) => {
-          this.dataSources.update(current => [
+        next: (res: DatasourceUploadResponse) => {
+          this.dataSources.update((current) => [
             ...current,
             {
               id: res.id,
               name: res.name || res.filename || 'Unbenannt',
-              size: this.formatBytes(res.file_size || file.size),
-              type: this.determineFileType(res.filename || file.name)
+              size: formatBytes(res.file_size || file.size),
+              type: determineFileType(res.filename || file.name),
+              filename: res.filename,
+              file_size: res.file_size
             }
           ]);
         },
-        error: (err) => console.error(`Fehler beim Upload von ${file.name}:`, err),
+        error: (err: unknown) => console.error(`Error uploading ${file.name}:`, err),
         complete: () => this.isUploading.set(false)
       });
     });
   }
 
-  private determineFileType(filename: string): 'pdf' | 'xls' | 'doc' {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') return 'pdf';
-    if (['xls', 'xlsx', 'csv'].includes(ext || '')) return 'xls';
-    return 'doc';
-  }
-
-  private formatBytes(bytes: number): string {
-    if (!bytes || bytes === 0) return '0 KB';
-    const kb = Math.round(bytes / 1024);
-    return `${kb} KB`;
-  }
-
+  /**
+   * Saves the current form as either a new agent or an updated record.
+   */
   onSave(): void {
     const selected = this.agentService.selectedAgent();
 
-    const payload = {
+    const payload: CreateAgentDto = {
       name: this.agentName(),
       description: this.agentDescription(),
       system_prompt: this.systemPrompt(),
-      skills: this.skills().filter(s => s.selected).map(s => s.systemName),
+      skills: this.skills().filter((s) => s.selected).map((s) => s.systemName),
       memory_enabled: this.memoryEnabled(),
       memory_mode: this.memoryMode(),
       memory_limit_type: this.memoryLimitType(),
-      memory_message_count: this.memoryLimitType() === 'message_count' ? this.memoryMessageCount() : null
+      memory_message_count:
+        this.memoryLimitType() === 'message_count' ? this.memoryMessageCount() : null
     };
 
     if (selected) {
-      console.log('Aktualisiere Agent:', selected.id, payload);
-      this.agentService.updateAgent(selected.id, payload).subscribe({
-        next: () => console.log('Agent erfolgreich aktualisiert!'),
-        error: (err) => console.error('Fehler beim Aktualisieren:', err)
+      this.agentService.updateAgent(selected.id, payload as UpdateAgentDto).subscribe({
+        next: () => console.log('Agent updated successfully.'),
+        error: (err: unknown) => console.error('Error updating agent:', err)
       });
     } else {
-      console.log('Erstelle neuen Agenten:', payload);
       this.agentService.createAgent(payload).subscribe({
-        next: () => console.log('Neuer Agent erfolgreich erstellt!'),
-        error: (err) => console.error('Fehler beim Erstellen:', err)
+        next: () => console.log('Agent created successfully.'),
+        error: (err: unknown) => console.error('Error creating agent:', err)
       });
     }
   }
 
+  /**
+   * Deletes the currently active agent.
+   */
   onDelete(): void {
     const selected = this.agentService.selectedAgent();
     if (!selected) return;
-
     this.agentService.deleteAgent(selected.id);
   }
 
+  /**
+   * Resets the entire configuration form back to default state.
+   */
   resetForm(): void {
     this.agentName.set('');
     this.agentDescription.set('');
@@ -208,11 +209,11 @@ export class AgentConfigComponent {
     this.memoryMode.set('user_only');
     this.memoryLimitType.set('all');
     this.memoryMessageCount.set(10);
-    
-    this.skills.update(skills => 
-      skills.map(s => ({ ...s, selected: false }))
+
+    this.skills.update((skills) =>
+      skills.map((s) => ({ ...s, selected: false }))
     );
-    
+
     this.dataSources.set([]);
 
     setTimeout(() => {
@@ -220,22 +221,26 @@ export class AgentConfigComponent {
     }, 0);
   }
 
+  /**
+   * Removes a linked datasource from the agent.
+   *
+   * @param datasourceId - Unique identifier of the datasource.
+   */
   removeDatasource(datasourceId: string): void {
     const agentId = this.agentService.selectedAgent()?.id;
-    
     if (!agentId || !datasourceId) {
-      console.warn('Agent-ID oder Datasource-ID fehlt.');
+      console.warn('Missing Agent ID or Datasource ID.');
       return;
     }
 
     this.datasourceService.deleteDatasource(agentId, datasourceId).subscribe({
       next: () => {
-        this.dataSources.update(sources => 
-          sources.filter(ds => ds.id !== datasourceId)
+        this.dataSources.update((sources) =>
+          sources.filter((ds) => ds.id !== datasourceId)
         );
       },
-      error: (err) => {
-        console.error('Fehler beim Löschen der Datasource:', err);
+      error: (err: unknown) => {
+        console.error('Error deleting datasource:', err);
       }
     });
   }

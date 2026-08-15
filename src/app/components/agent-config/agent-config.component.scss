@@ -5,7 +5,6 @@
 }
 
 .config-container {
-  // Dark Mode Variablen
   --bg-color: #0b1120;
   --input-bg: rgba(255, 255, 255, 0.02);
   --input-border: rgba(255, 255, 255, 0.1);
@@ -19,7 +18,6 @@
   --card-bg: rgba(255, 255, 255, 0.02);
   --card-border: rgba(255, 255, 255, 0.08);
 
-  // Light Mode Variablen
   &.light-mode {
     --bg-color: #ffffff;
     --input-bg: #ffffff;
@@ -79,7 +77,6 @@
     gap: 24px;
   }
 
-  /* Formular Felder */
   .field-row {
     display: grid;
     grid-template-columns: 80px 1fr;
@@ -118,36 +115,6 @@
     }
   }
 
-  /* Skills Pills Grid */
-  .skills-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-
-    .skill-pill {
-      background: var(--pill-bg);
-      border: none;
-      color: var(--pill-text);
-      font-family: monospace;
-      font-size: 0.8rem;
-      padding: 6px 12px;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        opacity: 0.8;
-      }
-
-      &.selected {
-        background-color: var(--pill-active-bg);
-        color: var(--pill-active-text);
-        font-weight: 600;
-      }
-    }
-  }
-
-  /* System Prompt Editor */
   .editor-section {
     border-top: 1px solid var(--toolbar-border);
     padding-top: 16px;
@@ -163,21 +130,6 @@
         display: flex;
         align-items: center;
         gap: 6px;
-      }
-
-      .font-selector {
-        display: flex;
-        align-items: center;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        cursor: pointer;
-        margin-right: 8px;
-
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-        }
       }
 
       .toolbar-divider {
@@ -224,7 +176,6 @@
     }
   }
 
-  /* Datasources Section */
   .datasources-section {
     border-top: 1px solid var(--toolbar-border);
     padding-top: 20px;
@@ -272,24 +223,16 @@
           color: #ffffff;
           flex-shrink: 0;
 
-          &.pdf {
-            background-color: #ef4444;
-          }
-
-          &.xls {
-            background-color: #10b981;
-          }
-
-          &.doc {
-            background-color: #3b82f6; // Blau für Word/Dokumente
-          }
+          &.pdf { background-color: #ef4444; }
+          &.xls { background-color: #10b981; }
+          &.doc { background-color: #3b82f6; }
         }
 
         .file-info {
           display: flex;
           flex-direction: column;
           flex: 1;
-          min-width: 0; // Wichtig, damit text-overflow: ellipsis bei flexbox funktioniert
+          min-width: 0;
 
           .file-name {
             font-size: 0.85rem;
@@ -334,7 +277,6 @@
     }
   }
 
-  /* Sticky Footer */
   .config-footer {
     padding: 16px 24px 24px 24px;
     display: flex;
@@ -424,7 +366,6 @@
   .memory-options {
     display: flex;
     flex-direction: column;
-    gap: 0;
 
     .limit-group {
       display: flex;

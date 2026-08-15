@@ -59,13 +59,17 @@
     </button>
   </div>
 
-  <!-- Drückt den Toggle-Button ganz nach unten -->
   <div class="spacer"></div>
 
   <mat-divider class="divider"></mat-divider>
 
-  <!-- Theme Toggle Button ganz unten -->
-  <button mat-icon-button class="theme-toggle" (click)="onToggleTheme()" [matTooltip]="isLightMode() ? 'Dark Mode' : 'Light Mode'">
+  <!-- Theme Toggle Button -->
+  <button 
+    mat-icon-button 
+    class="theme-toggle" 
+    (click)="onToggleTheme()" 
+    [matTooltip]="isLightMode() ? 'Dark Mode' : 'Light Mode'"
+  >
     <mat-icon>{{ isLightMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
   </button>
 </nav>
