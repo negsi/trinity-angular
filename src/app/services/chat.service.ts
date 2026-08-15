@@ -224,7 +224,26 @@ export class ApiChatService {
           if (dataLines.length > 0) {
             const eventContent = dataLines.join('\n');
             if (eventContent !== '[DONE]') {
-              chunkText += eventContent;
+              if (eventContent.startsWith('__ATTACHMENTS__:')) {
+                try {
+                  const jsonStr = eventContent.replace('__ATTACHMENTS__:', '');
+                  const payload = JSON.parse(jsonStr);
+                  
+                  if (payload.type === 'attachments' && payload.files) {
+                    this.messages.update((prev) =>
+                      prev.map((m) =>
+                        m.id === tempAgentMsgId 
+                          ? { ...m, attachments: [...(m.attachments || []), ...payload.files] } 
+                          : m
+                      )
+                    );
+                  }
+                } catch (e) {
+                  console.error('Failed to parse attachments SSE event', e);
+                }
+              } else {
+                chunkText += eventContent;
+              }
             }
           }
         }

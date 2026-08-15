@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.0.7] - 2026-08-15
+
+### Added
+- **Dynamic Stream Attachments**: Integrated handling for `__ATTACHMENTS__` SSE payload events to render file attachment badges dynamically in real time upon agent completion.
+
+### Changed
+- **Attachment Download Pathing**: Updated conversation file attachment URLs to use the path-encoded filename endpoint for seamless downloads of generated and uploaded files.
+
 ## [0.0.6] - 2026-08-15
 
 ### Added
@@ -77,7 +85,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.6...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.7...develop
+[0.0.7]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.7
 [0.0.6]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.6
 [0.0.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.5
 [0.0.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.4
