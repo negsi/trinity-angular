@@ -66,10 +66,16 @@
                   @if (msg.attachments && msg.attachments.length > 0) {
                     <div class="msg-attachments">
                       @for (att of msg.attachments; track att.id) {
-                        <div class="attachment-badge">
-                          <mat-icon>attach_file</mat-icon>
+                        <a 
+                          class="attachment-badge" 
+                          [href]="'/api/v1/chat/conversations/' + activeConversationId() + '/files/' + att.filename" 
+                          target="_blank" 
+                          [matTooltip]="'Datei herunterladen: ' + att.name"
+                        >
+                          <mat-icon>insert_drive_file</mat-icon>
                           <span class="attachment-name">{{ att.name }}</span>
-                        </div>
+                          <mat-icon class="download-icon">download</mat-icon>
+                        </a>
                       }
                     </div>
                   }

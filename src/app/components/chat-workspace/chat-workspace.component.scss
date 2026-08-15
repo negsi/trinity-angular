@@ -190,6 +190,57 @@
               opacity: 0.8;
             }
           }
+
+          .msg-attachments {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+            .attachment-badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              padding: 6px 10px;
+              border-radius: 8px;
+              background-color: rgba(255, 255, 255, 0.08);
+              color: inherit;
+              text-decoration: none !important;
+              font-size: 0.82rem;
+              font-weight: 500;
+              transition: background-color 0.15s ease, transform 0.1s ease;
+              cursor: pointer;
+
+              &:hover {
+                background-color: rgba(255, 255, 255, 0.16);
+                transform: translateY(-1px);
+
+                .download-icon {
+                  opacity: 1;
+                }
+              }
+
+              mat-icon {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+              }
+
+              .attachment-name {
+                max-width: 180px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .download-icon {
+                opacity: 0.6;
+                transition: opacity 0.15s ease;
+              }
+            }
+          }
         }
 
         .meta {

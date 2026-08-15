@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Dynamic Stream Attachments**: Integrated handling for `__ATTACHMENTS__` SSE payload events to render file attachment badges dynamically in real time upon agent completion.
 
 ### Changed
+- **Attachment Download Pathing**: Updated conversation file attachment URLs to use the path-encoded filename endpoint for seamless downloads of generated and uploaded files.
 
 ## [0.0.6] - 2026-08-15
 
