@@ -13,20 +13,18 @@
 }
 
 .slim-sidebar {
-  // --- Dark Mode Standard ---
   --bg-color: #0b1120;
   --text-color: #94a3b8;
   --active-bg: rgba(59, 130, 246, 0.15);
   --active-color: #3b82f6;
   --border-color: rgba(255, 255, 255, 0.08);
 
-  // --- White Mode Overrides ---
   &.light-mode {
-    --bg-color: #ffffff;             // Strahlendes Weiß
-    --text-color: #64748b;           // Schickes Schiefergrau für inaktive Icons
-    --active-bg: #eff6ff;            // Sanfter blauer Hintergrund für aktive Icons
-    --active-color: #2563eb;         // Kräftiges Blau für das aktive Icon
-    --border-color: rgba(0, 0, 0, 0.08); // Dezenter grauer Trennstrich nach rechts
+    --bg-color: #ffffff;
+    --text-color: #64748b;
+    --active-bg: #eff6ff;
+    --active-color: #2563eb;
+    --border-color: rgba(0, 0, 0, 0.08);
   }
 
   width: 64px;

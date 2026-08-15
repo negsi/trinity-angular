@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Renamed and restructured components to follow official Angular naming conventions (`*.component.ts`, `*.component.html`, `*.component.scss`)
+- Moved feature components (`agent-config`, `agent-list`, `chat-workspace`, `conversation-drawer`, `sidebar`) into `src/app/components/`
+- Refactored root layout to decouple components from `AppComponent`
+- Added JSDoc documentation to application configuration (`app.config.ts`) and routing definitions (`app.routes.ts`)
+- Updated `.gitignore` to exclude generated codebase summary files (`codebase_summary.txt`)
+
 ## [0.0.5] - 2026-08-13
 
 ### Added

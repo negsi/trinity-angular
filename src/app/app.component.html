@@ -1,21 +1,25 @@
 <div class="workspace-container" [class.light-mode]="isLightMode()">
-  <!-- Spalte 1: Sidebar mit Output-Event für den Toggle -->
+  <!-- Column 1: Navigation Slim Sidebar -->
   <app-sidebar 
     [isLightMode]="isLightMode()" 
     (themeToggle)="toggleTheme()" 
     (createNewAgent)="onCreateNewAgent()"
   ></app-sidebar>
 
+  <!-- Column 2: Agent Directory List -->
   <aside class="column col-subnav">
     <app-agent-list [isLightMode]="isLightMode()"></app-agent-list>
   </aside>
 
+  <!-- Column 3: Main Chat Workspace -->
   <main class="column col-main">
     <app-chat-workspace [isLightMode]="isLightMode()"></app-chat-workspace>
   </main>
 
+  <!-- Resizer Handle -->
   <div class="resizer-handle" (mousedown)="startResizing($event)"></div>
 
+  <!-- Column 4: Agent Configuration Panel -->
   <aside class="column col-details" [style.width.px]="rightPanelWidth()">
     <app-agent-config [isLightMode]="isLightMode()"></app-agent-config>
   </aside>

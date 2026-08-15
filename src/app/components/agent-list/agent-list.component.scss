@@ -2,13 +2,12 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 320px; // Standardbreite festlegen
+  width: 320px;
   color: var(--text-primary);
   user-select: none;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
-  // --- COLLAPSED STATE ---
   &.collapsed {
     width: 60px;
 
@@ -17,7 +16,7 @@
       justify-content: center;
 
       .header-title {
-        display: none; // Blendet "Direct" und Counter aus
+        display: none;
       }
     }
 
@@ -27,7 +26,7 @@
         padding: 12px 0;
 
         .agent-details {
-          display: none; // Blendet Namen und Beschreibung aus
+          display: none;
         }
       }
 

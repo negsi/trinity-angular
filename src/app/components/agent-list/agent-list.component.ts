@@ -10,8 +10,8 @@ import { Agent } from '../../models/agent.model';
   selector: 'app-agent-list',
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
-  templateUrl: './agent-list.html',
-  styleUrl: './agent-list.scss'
+  templateUrl: './agent-list.component.html',
+  styleUrl: './agent-list.component.scss'
 })
 export class AgentListComponent implements OnInit {
   private readonly COLLAPSE_KEY = 'trinity_agent_list_collapsed';

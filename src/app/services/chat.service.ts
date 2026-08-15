@@ -2,8 +2,11 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Message, SendMessageDto } from '../models/message.model';
-import { ConversationUI } from '../components/conversation-drawer/conversation-drawer';
+import { ConversationUI } from '../models/conversation.model';
 
+/**
+ * Service managing chat messaging, conversation histories, and streaming responses.
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -12,13 +15,20 @@ export class ApiChatService {
   private readonly baseUrl = '/api/v1/chat';
   private readonly agentsUrl = '/api/v1/agents';
 
+  /** Signal containing the current message list */
   readonly messages = signal<Message[]>([]);
+
+  /** Signal indicating active message loading */
   readonly isLoading = signal<boolean>(false);
+
+  /** Signal indicating an active SSE streaming response */
   readonly isStreaming = signal<boolean>(false);
+
+  /** Signal containing the latest error state */
   readonly error = signal<string | null>(null);
 
   /**
-   * Leert die aktuell geladenen Nachrichten im Signal.
+   * Clears the current active messages and resets error signals.
    */
   clearMessages(): void {
     this.messages.set([]);
@@ -26,50 +36,78 @@ export class ApiChatService {
   }
 
   /**
-   * Lädt alle Konversationen für einen bestimmten Agenten.
+   * Retrieves all conversations for a specific agent.
+   *
+   * @param agentId - The agent's unique identifier.
+   * @returns Observable emitting the conversation list.
    */
   getConversations(agentId: string): Observable<ConversationUI[]> {
     return this.http.get<ConversationUI[]>(`${this.agentsUrl}/${agentId}/conversations`);
   }
 
   /**
-   * Löscht eine Konversation anhand ihrer ID.
+   * Deletes a conversation from an agent's history.
+   *
+   * @param agentId - The agent's identifier.
+   * @param conversationId - The conversation identifier.
+   * @returns Observable emitting upon completion.
    */
   deleteConversation(agentId: string, conversationId: string): Observable<void> {
-    if (!agentId || !conversationId) {
-      throw new Error('agentId und conversationId müssen übergeben werden.');
-    }
-
-    // Ruft jetzt /api/v1/agents/<agent_id>/conversations/<conversation_id> auf
-    return this.http.delete<void>(`${this.agentsUrl}/${agentId}/conversations/${conversationId}`);
+    return this.http.delete<void>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}`
+    );
   }
 
-  loadMessages(agentId: string, conversationId: string, limit: number = 50): void {
-    if (!conversationId || !agentId) return;
+  /**
+   * Loads message history for a conversation.
+   *
+   * @param agentId - The agent's identifier.
+   * @param conversationId - The conversation identifier.
+   * @param limit - Max number of messages to fetch.
+   */
+  loadMessages(agentId: string, conversationId: string, limit = 50): void {
+    if (!conversationId || !agentId) {
+      return;
+    }
 
     this.isLoading.set(true);
     this.error.set(null);
 
-    // Neuer Pfad über die agents.py Route:
-    this.http.get<Message[]>(`${this.agentsUrl}/${agentId}/conversations/${conversationId}/history?limit=${limit}`).subscribe({
-      next: (data) => {
-        this.messages.set(data);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Fehler beim Laden der Nachrichten:', err);
-        this.error.set('Nachrichten konnten nicht geladen werden.');
-        this.isLoading.set(false);
-      }
-    });
+    this.http
+      .get<Message[]>(
+        `${this.agentsUrl}/${agentId}/conversations/${conversationId}/history?limit=${limit}`
+      )
+      .subscribe({
+        next: (data: Message[]) => {
+          this.messages.set(data);
+          this.isLoading.set(false);
+        },
+        error: (err: unknown) => {
+          console.error('Failed to load messages:', err);
+          this.error.set('Failed to load messages.');
+          this.isLoading.set(false);
+        }
+      });
   }
 
-  sendMessage(dto: SendMessageDto, agentName: string, files: File[] = [], onNewConvCreated?: (newId: string) => void): void {
+  /**
+   * Dispatches a user message and starts receiving the streaming response.
+   *
+   * @param dto - Message transfer payload.
+   * @param agentName - Active agent's name.
+   * @param files - Optional list of file attachments.
+   * @param onNewConvCreated - Optional callback triggered when a new conversation ID is assigned.
+   */
+  sendMessage(
+    dto: SendMessageDto,
+    agentName: string,
+    files: File[] = [],
+    onNewConvCreated?: (newId: string) => void
+  ): void {
     let payload: SendMessageDto | FormData = dto;
 
     if (files.length > 0) {
       const formData = new FormData();
-      // 💡 Nur anhängen, wenn eine conversation_id existiert!
       if (dto.conversation_id) {
         formData.append('conversation_id', dto.conversation_id);
       }
@@ -77,9 +115,11 @@ export class ApiChatService {
       formData.append('sender_type', dto.sender_type);
       formData.append('sender_name', dto.sender_name);
       formData.append('text', dto.text || '');
-      if (dto.recipient_id) formData.append('recipient_id', dto.recipient_id);
+      if (dto.recipient_id) {
+        formData.append('recipient_id', dto.recipient_id);
+      }
 
-      files.forEach(file => {
+      files.forEach((file) => {
         formData.append('files', file);
       });
 
@@ -87,29 +127,31 @@ export class ApiChatService {
     }
 
     this.http.post<Message>(`${this.baseUrl}/messages`, payload).subscribe({
-      next: (savedUserMsg) => {
-        this.messages.update(prev => [...prev, savedUserMsg]);
+      next: (savedUserMsg: Message) => {
+        this.messages.update((prev) => [...prev, savedUserMsg]);
 
-        // Callback ausführen, falls eine neue Conversation gestartet wurde
         if (onNewConvCreated && savedUserMsg.conversation_id) {
           onNewConvCreated(savedUserMsg.conversation_id);
         }
 
-        this.streamAgentResponse(
+        void this.streamAgentResponse(
           dto.text,
           savedUserMsg.conversation_id,
-          dto.recipient_id!,
+          dto.recipient_id ?? '',
           agentName,
           dto.sender_id
         );
       },
-      error: (err) => {
-        console.error('Fehler beim Senden der Nachricht:', err);
-        this.error.set('Fehler beim Senden der Nachricht.');
+      error: (err: unknown) => {
+        console.error('Failed to send message:', err);
+        this.error.set('Failed to send message.');
       }
     });
   }
 
+  /**
+   * Consumes an SSE stream from the backend and appends chunks reactively.
+   */
   private async streamAgentResponse(
     userText: string,
     conversationId: string,
@@ -117,7 +159,7 @@ export class ApiChatService {
     agentName: string,
     userId: string
   ): Promise<void> {
-    const tempAgentMsgId = 'stream-' + Date.now();
+    const tempAgentMsgId = `stream-${Date.now()}`;
 
     const agentMsg: Message = {
       id: tempAgentMsgId,
@@ -130,7 +172,7 @@ export class ApiChatService {
       timestamp: new Date().toISOString()
     };
 
-    this.messages.update(prev => [...prev, agentMsg]);
+    this.messages.update((prev) => [...prev, agentMsg]);
     this.isStreaming.set(true);
 
     try {
@@ -146,8 +188,12 @@ export class ApiChatService {
         })
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      if (!response.body) return;
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+      if (!response.body) {
+        return;
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
@@ -158,7 +204,6 @@ export class ApiChatService {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-
         const events = buffer.split('\n\n');
         buffer = events.pop() ?? '';
 
@@ -185,8 +230,10 @@ export class ApiChatService {
         }
 
         if (chunkText) {
-          this.messages.update(prev =>
-            prev.map(m => (m.id === tempAgentMsgId ? { ...m, text: m.text + chunkText } : m))
+          this.messages.update((prev) =>
+            prev.map((m) =>
+              m.id === tempAgentMsgId ? { ...m, text: m.text + chunkText } : m
+            )
           );
         }
       }
@@ -200,15 +247,16 @@ export class ApiChatService {
         }
         const finalContent = dataLines.join('\n');
         if (finalContent && finalContent !== '[DONE]') {
-          this.messages.update(prev =>
-            prev.map(m => (m.id === tempAgentMsgId ? { ...m, text: m.text + finalContent } : m))
+          this.messages.update((prev) =>
+            prev.map((m) =>
+              m.id === tempAgentMsgId ? { ...m, text: m.text + finalContent } : m
+            )
           );
         }
       }
-
-    } catch (err) {
-      console.error('Streaming-Fehler:', err);
-      this.error.set('Streaming fehlgeschlagen.');
+    } catch (err: unknown) {
+      console.error('Streaming error occurred:', err);
+      this.error.set('Streaming failed.');
     } finally {
       this.isStreaming.set(false);
     }
