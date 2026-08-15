@@ -1,0 +1,96 @@
+"""
+Codebase Aggregation Utility Script.
+
+This script recursively scans the project directory, filters out specified directories
+(such as node_modules, build outputs, and version control metadata), reads all matching
+Angular source files (.ts, .html, .scss, .json, excluding .spec.ts), and concatenates 
+their contents into a single formatted summary file (`codebase_summary.txt`).
+"""
+
+import os
+
+# Target destination text file where the concatenated codebase summary will be saved
+OUTPUT_FILE = "codebase_summary.txt"
+
+# Set of directory paths or names to ignore during filesystem traversal (normalisiert)
+IGNORE_DIRS = {
+    os.path.normpath(p)
+    for p in {
+        ".angular",
+        "dist",
+        "node_modules",
+        ".git",
+        ".idea",
+        ".vscode",
+        "coverage",
+    }
+}
+
+# Set of specific file names to ignore during aggregation
+IGNORE_FILES = {
+    "concat_code.py",
+    OUTPUT_FILE,
+    "package-lock.json",  # Optional: Verhindert riesige Lockfiles im Prompt-Kontext
+}
+
+# Allowed file extensions to include in the output file
+ALLOWED_EXTENSIONS = {".ts", ".html", ".scss", ".json"}
+
+
+def collect_code(root_dir: str = ".") -> None:
+    """
+    Traverses the directory tree from `root_dir`, filters out ignored directories/files,
+    and appends the contents of matching Angular source files into a unified text file.
+
+    Args:
+        root_dir (str): Root directory path from which to start scanning. Defaults to "." (current directory).
+    """
+    # Open the summary destination file in write mode with UTF-8 encoding
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as out:
+        for current_root, dirs, files in os.walk(root_dir):
+            # Prune directory search list in-place using relative paths & directory names
+            dirs[:] = [
+                d
+                for d in dirs
+                if d not in IGNORE_DIRS
+                and os.path.normpath(
+                    os.path.relpath(os.path.join(current_root, d), root_dir)
+                )
+                not in IGNORE_DIRS
+            ]
+
+            # Process files in alphabetical order for deterministic output
+            for file in sorted(files):
+                # Skip explicitly ignored files
+                if file in IGNORE_FILES:
+                    continue
+
+                # Skip Angular test spec files
+                if file.endswith(".spec.ts"):
+                    continue
+
+                # Check if file extension matches allowed file types
+                _, ext = os.path.splitext(file)
+                if ext.lower() in ALLOWED_EXTENSIONS:
+                    full_path = os.path.join(current_root, file)
+                    rel_path = os.path.relpath(full_path, root_dir)
+
+                    # Write file identifier header
+                    out.write(f"// Datei: {rel_path}\n")
+
+                    # Attempt to read and append the target file content
+                    try:
+                        with open(full_path, "r", encoding="utf-8") as f:
+                            out.write(f.read())
+                    except Exception as e:
+                        out.write(f"// [Error reading file: {e}]\n")
+
+                    # Add blank lines as separator between files
+                    out.write("\n\n")
+
+    print(f"Done! Angular codebase was successfully written to '{OUTPUT_FILE}'.")
+
+
+if __name__ == "__main__":
+    # Execute code collection when run directly as main script
+    collect_code()
