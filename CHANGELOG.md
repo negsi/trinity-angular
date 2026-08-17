@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.0.8] - 2026-08-17
+
+### Added
+- **Markdown Image Styling:**
+  - Added SCSS rules (`::ng-deep img`) in `chat-workspace.component.scss` for embedded Markdown images (`max-width: 100%`, rounded corners, block layout).
+
+### Changed
+- **SSE Stream Processing Refactoring:**
+  - Extracted SSE event parsing in `ApiChatService` into a dedicated private helper method (`processSseEvent`).
+  - Improved SSE payload parsing resilience to handle mixed data lines, raw payloads, and leading whitespace before attachment payloads (`__ATTACHMENTS__:`).
+- **Agent Message Initialization:**
+  - Explicitly initialized the `attachments` array on temporary agent message models created during response streaming.
+
 ## [0.0.7] - 2026-08-15
 
 ### Added
@@ -85,7 +98,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.7...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.8...develop
+[0.0.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.8
 [0.0.7]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.7
 [0.0.6]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.6
 [0.0.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.5

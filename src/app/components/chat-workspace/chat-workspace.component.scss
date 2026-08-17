@@ -181,6 +181,14 @@
           line-height: 1.45;
           word-break: break-word;
 
+          ::ng-deep img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: block;
+          }
+
           ::ng-deep a {
             text-decoration: underline;
             text-underline-offset: 3px;

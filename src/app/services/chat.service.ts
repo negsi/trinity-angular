@@ -169,7 +169,8 @@ export class ApiChatService {
       sender_name: agentName,
       text: '',
       recipient_id: userId,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      attachments: []
     };
 
     this.messages.update((prev) => [...prev, agentMsg]);
@@ -204,74 +205,17 @@ export class ApiChatService {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
+        
         const events = buffer.split('\n\n');
         buffer = events.pop() ?? '';
 
-        let chunkText = '';
-
         for (const event of events) {
-          const lines = event.split('\n');
-          const dataLines: string[] = [];
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              dataLines.push(line.slice(6));
-            } else if (line.startsWith('data:')) {
-              dataLines.push(line.slice(5));
-            }
-          }
-
-          if (dataLines.length > 0) {
-            const eventContent = dataLines.join('\n');
-            if (eventContent !== '[DONE]') {
-              if (eventContent.startsWith('__ATTACHMENTS__:')) {
-                try {
-                  const jsonStr = eventContent.replace('__ATTACHMENTS__:', '');
-                  const payload = JSON.parse(jsonStr);
-                  
-                  if (payload.type === 'attachments' && payload.files) {
-                    this.messages.update((prev) =>
-                      prev.map((m) =>
-                        m.id === tempAgentMsgId 
-                          ? { ...m, attachments: [...(m.attachments || []), ...payload.files] } 
-                          : m
-                      )
-                    );
-                  }
-                } catch (e) {
-                  console.error('Failed to parse attachments SSE event', e);
-                }
-              } else {
-                chunkText += eventContent;
-              }
-            }
-          }
-        }
-
-        if (chunkText) {
-          this.messages.update((prev) =>
-            prev.map((m) =>
-              m.id === tempAgentMsgId ? { ...m, text: m.text + chunkText } : m
-            )
-          );
+          this.processSseEvent(event, tempAgentMsgId);
         }
       }
 
       if (buffer.trim()) {
-        const lines = buffer.split('\n');
-        const dataLines: string[] = [];
-        for (const line of lines) {
-          if (line.startsWith('data: ')) dataLines.push(line.slice(6));
-          else if (line.startsWith('data:')) dataLines.push(line.slice(5));
-        }
-        const finalContent = dataLines.join('\n');
-        if (finalContent && finalContent !== '[DONE]') {
-          this.messages.update((prev) =>
-            prev.map((m) =>
-              m.id === tempAgentMsgId ? { ...m, text: m.text + finalContent } : m
-            )
-          );
-        }
+        this.processSseEvent(buffer, tempAgentMsgId);
       }
     } catch (err: unknown) {
       console.error('Streaming error occurred:', err);
@@ -279,5 +223,60 @@ export class ApiChatService {
     } finally {
       this.isStreaming.set(false);
     }
+  }
+
+  /**
+   * Extracts data payload from SSE event string and dispatches to text or attachments.
+   */
+  private processSseEvent(rawEvent: string, messageId: string): void {
+    const lines = rawEvent.split('\n');
+    const dataLines: string[] = [];
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        dataLines.push(line.slice(6));
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5));
+      } else if (line.trim() && !line.startsWith(':')) {
+        dataLines.push(line);
+      }
+    }
+
+    if (dataLines.length === 0) {
+      return;
+    }
+
+    const content = dataLines.join('\n');
+
+    if (content === '[DONE]') {
+      return;
+    }
+
+    if (content.includes('__ATTACHMENTS__:')) {
+      const jsonStart = content.indexOf('__ATTACHMENTS__:') + '__ATTACHMENTS__:'.length;
+      const jsonStr = content.substring(jsonStart).trim();
+
+      try {
+        const payload = JSON.parse(jsonStr);
+        if (payload.type === 'attachments' && Array.isArray(payload.files)) {
+          this.messages.update((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? { ...m, attachments: [...(m.attachments || []), ...payload.files] }
+                : m
+            )
+          );
+        }
+      } catch (e) {
+        console.error('Failed to parse attachments SSE payload:', e, jsonStr);
+      }
+      return;
+    }
+
+    this.messages.update((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, text: m.text + content } : m
+      )
+    );
   }
 }
