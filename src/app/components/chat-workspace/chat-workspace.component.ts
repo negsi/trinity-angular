@@ -97,7 +97,7 @@ export class ChatWorkspaceComponent {
         time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isRead: true,
         attachments: msg.attachments ?? [],
-        taskChain: msg.taskChain ?? []
+        taskPhases: msg.taskPhases ?? []
       };
 
       if (!groupsMap.has(dateLabel)) {

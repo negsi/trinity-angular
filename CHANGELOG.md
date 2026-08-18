@@ -10,7 +10,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-## [0.0.9] - 2026-08-17
+## [0.1.0] - 2026-08-18
+
+### Added
+
+- Added `TaskPhase` interface to support multi-phase task execution chains in messages.
+
+### Changed
+
+- Refactored `taskChain` property in `Message` and `ChatMessageUI` models to `taskPhases` array for multi-turn task history tracking.
+- Updated `ApiChatService` to handle multi-phase `task_chain_init` events by appending new phases instead of overwriting existing task steps.
+- Updated `ApiChatService` SSE handler for `task_step_update` to target steps within the active (latest) task phase.
+- Updated `ChatWorkspaceComponent` template to render grouped task steps sequentially per phase (`Aufgabenplan (Phase X)`).
+- Updated typing indicator visibility check to account for active `taskPhases`.
+
+## [0.0.9] - 2026-08-18
 
 ### Added
 - **Task Chain Execution Progress Visualization**:
@@ -112,7 +126,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.9...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.0...develop
+[0.1.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.0
 [0.0.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.9
 [0.0.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.8
 [0.0.7]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.7
