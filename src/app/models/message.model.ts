@@ -1,3 +1,5 @@
+import { TaskItem } from './task-chain.model';
+
 /**
  * Actor sending the message.
  */
@@ -28,6 +30,7 @@ export interface Message {
   recipient_id?: string | null;
   timestamp: string;
   attachments?: MessageAttachment[];
+  taskChain?: TaskItem[];
 }
 
 /**
@@ -55,6 +58,7 @@ export interface ChatMessageUI {
   time: string;
   isRead?: boolean;
   attachments?: MessageAttachment[];
+  taskChain?: TaskItem[];
 }
 
 /**
