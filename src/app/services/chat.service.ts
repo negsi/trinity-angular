@@ -252,6 +252,7 @@ export class ApiChatService {
       return;
     }
 
+    // 1. Attachments handling
     if (content.includes('__ATTACHMENTS__:')) {
       const jsonStart = content.indexOf('__ATTACHMENTS__:') + '__ATTACHMENTS__:'.length;
       const jsonStr = content.substring(jsonStart).trim();
@@ -273,6 +274,44 @@ export class ApiChatService {
       return;
     }
 
+    // 2. Task chain handling
+    if (content.includes('__TASK_CHAIN__:')) {
+      const jsonStart = content.indexOf('__TASK_CHAIN__:') + '__TASK_CHAIN__:'.length;
+      const jsonStr = content.substring(jsonStart).trim();
+
+      try {
+        const payload = JSON.parse(jsonStr);
+
+        if (payload.type === 'task_chain_init' && Array.isArray(payload.steps)) {
+          this.messages.update((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, taskChain: payload.steps } : m
+            )
+          );
+        } else if (payload.type === 'task_step_update') {
+          const stepNum = payload.step_number;
+
+          this.messages.update((prev) =>
+            prev.map((m) => {
+              if (m.id !== messageId || !m.taskChain) return m;
+
+              const updatedChain = m.taskChain.map((task) =>
+                task.step_number === stepNum
+                  ? { ...task, status: payload.status }
+                  : task
+              );
+
+              return { ...m, taskChain: updatedChain };
+            })
+          );
+        }
+      } catch (e) {
+        console.error('Failed to parse task chain SSE payload:', e, jsonStr);
+      }
+      return;
+    }
+
+    // 3. Normal text stream
     this.messages.update((prev) =>
       prev.map((m) =>
         m.id === messageId ? { ...m, text: m.text + content } : m
