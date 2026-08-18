@@ -16,6 +16,10 @@ export interface MessageAttachment {
   file_size: number;
   message_id?: string;
 }
+export interface TaskPhase {
+  phaseIndex: number;
+  steps: TaskItem[];
+}
 
 /**
  * Complete chat message model.
@@ -30,7 +34,7 @@ export interface Message {
   recipient_id?: string | null;
   timestamp: string;
   attachments?: MessageAttachment[];
-  taskChain?: TaskItem[];
+  taskPhases?: TaskPhase[];
 }
 
 /**
@@ -58,7 +62,7 @@ export interface ChatMessageUI {
   time: string;
   isRead?: boolean;
   attachments?: MessageAttachment[];
-  taskChain?: TaskItem[];
+  taskPhases?: TaskPhase[];
 }
 
 /**

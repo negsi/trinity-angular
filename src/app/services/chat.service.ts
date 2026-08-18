@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Message, SendMessageDto } from '../models/message.model';
+import { Message, SendMessageDto, TaskPhase } from '../models/message.model';
 import { ConversationUI } from '../models/conversation.model';
 
 /**
@@ -284,24 +284,37 @@ export class ApiChatService {
 
         if (payload.type === 'task_chain_init' && Array.isArray(payload.steps)) {
           this.messages.update((prev) =>
-            prev.map((m) =>
-              m.id === messageId ? { ...m, taskChain: payload.steps } : m
-            )
+            prev.map((m) => {
+              if (m.id !== messageId) return m;
+
+              const currentPhases = m.taskPhases || [];
+              const newPhase: TaskPhase = {
+                phaseIndex: currentPhases.length + 1,
+                steps: payload.steps
+              };
+
+              return { ...m, taskPhases: [...currentPhases, newPhase] };
+            })
           );
         } else if (payload.type === 'task_step_update') {
           const stepNum = payload.step_number;
 
           this.messages.update((prev) =>
             prev.map((m) => {
-              if (m.id !== messageId || !m.taskChain) return m;
+              if (m.id !== messageId || !m.taskPhases || m.taskPhases.length === 0) return m;
 
-              const updatedChain = m.taskChain.map((task) =>
-                task.step_number === stepNum
-                  ? { ...task, status: payload.status }
-                  : task
+              // Wir aktualisieren den Step in der neuesten/aktiven Phase
+              const updatedPhases = [...m.taskPhases];
+              const lastPhaseIndex = updatedPhases.length - 1;
+              const targetPhase = updatedPhases[lastPhaseIndex];
+
+              const updatedSteps = targetPhase.steps.map((task) =>
+                task.step_number === stepNum ? { ...task, status: payload.status } : task
               );
 
-              return { ...m, taskChain: updatedChain };
+              updatedPhases[lastPhaseIndex] = { ...targetPhase, steps: updatedSteps };
+
+              return { ...m, taskPhases: updatedPhases };
             })
           );
         }
