@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+## [0.0.9] - 2026-08-17
+
+### Added
 - **Task Chain Execution Progress Visualization**:
   - Integrated interactive task orchestration UI (`task-chain-card`) within agent message bubbles.
   - Added realtime status indicators (icons for `pending`, `running`, `completed`, and `failed` states) with visual spinner animations.
@@ -106,7 +112,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.8...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.0.9...develop
+[0.0.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.9
 [0.0.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.8
 [0.0.7]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.7
 [0.0.6]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.6
