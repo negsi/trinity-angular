@@ -42,11 +42,11 @@ export interface Message {
  */
 export interface SendMessageDto {
   conversation_id?: string;
-  sender_id: string;
-  sender_type: ActorType;
-  sender_name: string;
-  text: string;
-  recipient_id?: string | null;
+  sender_id?: string;
+  sender_type?: 'user' | 'agent' | 'system';
+  sender_name?: string;
+  text?: string;
+  recipient_id?: string;
 }
 
 /**

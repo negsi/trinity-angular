@@ -249,7 +249,7 @@ export class ChatWorkspaceComponent {
       textareaEl.style.height = 'auto';
     }
 
-    this.chatService.sendMessage(payload, activeAgent.name, files, (newConvId: string) => {
+    void this.chatService.sendMessage(payload, activeAgent.name, files, (newConvId: string) => {
       this.activeConversationId.set(newConvId);
       this.loadConversations();
     });
@@ -281,7 +281,7 @@ export class ChatWorkspaceComponent {
       recipient_id: activeAgent.id
     };
 
-    this.chatService.sendMessage(payload, activeAgent.name, []);
+    void this.chatService.sendMessage(payload, activeAgent.name, []);
   }
 
   onDeleteConversation(conversationId: string): void {

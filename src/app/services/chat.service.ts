@@ -12,7 +12,6 @@ import { ConversationUI } from '../models/conversation.model';
 })
 export class ApiChatService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/v1/chat';
   private readonly agentsUrl = '/api/v1/agents';
 
   /** Signal containing the current message list */
@@ -37,9 +36,6 @@ export class ApiChatService {
 
   /**
    * Retrieves all conversations for a specific agent.
-   *
-   * @param agentId - The agent's unique identifier.
-   * @returns Observable emitting the conversation list.
    */
   getConversations(agentId: string): Observable<ConversationUI[]> {
     return this.http.get<ConversationUI[]>(`${this.agentsUrl}/${agentId}/conversations`);
@@ -47,10 +43,6 @@ export class ApiChatService {
 
   /**
    * Deletes a conversation from an agent's history.
-   *
-   * @param agentId - The agent's identifier.
-   * @param conversationId - The conversation identifier.
-   * @returns Observable emitting upon completion.
    */
   deleteConversation(agentId: string, conversationId: string): Observable<void> {
     return this.http.delete<void>(
@@ -60,10 +52,6 @@ export class ApiChatService {
 
   /**
    * Loads message history for a conversation.
-   *
-   * @param agentId - The agent's identifier.
-   * @param conversationId - The conversation identifier.
-   * @param limit - Max number of messages to fetch.
    */
   loadMessages(agentId: string, conversationId: string, limit = 50): void {
     if (!conversationId || !agentId) {
@@ -91,102 +79,84 @@ export class ApiChatService {
   }
 
   /**
-   * Dispatches a user message and starts receiving the streaming response.
-   *
-   * @param dto - Message transfer payload.
-   * @param agentName - Active agent's name.
-   * @param files - Optional list of file attachments.
-   * @param onNewConvCreated - Optional callback triggered when a new conversation ID is assigned.
+   * Dispatches a user message and consumes the SSE stream from POST /api/v1/agents/<agent_id>/stream.
    */
-  sendMessage(
+  async sendMessage(
     dto: SendMessageDto,
     agentName: string,
     files: File[] = [],
     onNewConvCreated?: (newId: string) => void
-  ): void {
-    let payload: SendMessageDto | FormData = dto;
-
-    if (files.length > 0) {
-      const formData = new FormData();
-      if (dto.conversation_id) {
-        formData.append('conversation_id', dto.conversation_id);
-      }
-      formData.append('sender_id', dto.sender_id);
-      formData.append('sender_type', dto.sender_type);
-      formData.append('sender_name', dto.sender_name);
-      formData.append('text', dto.text || '');
-      if (dto.recipient_id) {
-        formData.append('recipient_id', dto.recipient_id);
-      }
-
-      files.forEach((file) => {
-        formData.append('files', file);
-      });
-
-      payload = formData;
+  ): Promise<void> {
+    const agentId = dto.recipient_id;
+    if (!agentId) {
+      console.error('Missing agent_id (recipient_id) in sendMessage payload.');
+      return;
     }
 
-    this.http.post<Message>(`${this.baseUrl}/messages`, payload).subscribe({
-      next: (savedUserMsg: Message) => {
-        this.messages.update((prev) => [...prev, savedUserMsg]);
+    // 1. Optimistischer UI-Eintrag für die User-Nachricht
+    const tempUserMsg: Message = {
+      id: `user-${Date.now()}`,
+      conversation_id: dto.conversation_id || '',
+      sender_id: 'user',
+      sender_type: 'user',
+      sender_name: dto.sender_name || 'User',
+      text: dto.text || '',
+      recipient_id: agentId,
+      timestamp: new Date().toISOString(),
+      attachments: files.map((f) => ({
+        id: `att-${Date.now()}-${f.name}`,
+        name: f.name,
+        filename: f.name,
+        file_path: '',
+        file_size: f.size,
+        mime_type: f.type
+      }))
+    };
 
-        if (onNewConvCreated && savedUserMsg.conversation_id) {
-          onNewConvCreated(savedUserMsg.conversation_id);
-        }
-
-        void this.streamAgentResponse(
-          dto.text,
-          savedUserMsg.conversation_id,
-          dto.recipient_id ?? '',
-          agentName,
-          dto.sender_id
-        );
-      },
-      error: (err: unknown) => {
-        console.error('Failed to send message:', err);
-        this.error.set('Failed to send message.');
-      }
-    });
-  }
-
-  /**
-   * Consumes an SSE stream from the backend and appends chunks reactively.
-   */
-  private async streamAgentResponse(
-    userText: string,
-    conversationId: string,
-    agentId: string,
-    agentName: string,
-    userId: string
-  ): Promise<void> {
+    // 2. Platzhalter für die kommende Agent-Antwort vorbereiten
     const tempAgentMsgId = `stream-${Date.now()}`;
-
-    const agentMsg: Message = {
+    const tempAgentMsg: Message = {
       id: tempAgentMsgId,
-      conversation_id: conversationId,
+      conversation_id: dto.conversation_id || '',
       sender_id: agentId,
       sender_type: 'agent',
       sender_name: agentName,
       text: '',
-      recipient_id: userId,
+      recipient_id: 'user',
       timestamp: new Date().toISOString(),
       attachments: []
     };
 
-    this.messages.update((prev) => [...prev, agentMsg]);
+    this.messages.update((prev) => [...prev, tempUserMsg, tempAgentMsg]);
     this.isStreaming.set(true);
+    this.error.set(null);
 
     try {
-      const response = await fetch(`${this.baseUrl}/stream`, {
+      // 3. Single Pipeline Request: Payload zusammenstellen
+      let body: FormData | string;
+      const headers: Record<string, string> = {};
+
+      if (files.length > 0) {
+        const formData = new FormData();
+        formData.append('text', dto.text || '');
+        if (dto.conversation_id) {
+          formData.append('conversation_id', dto.conversation_id);
+        }
+        files.forEach((file) => formData.append('files', file));
+        body = formData;
+      } else {
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify({
+          text: dto.text || '',
+          conversation_id: dto.conversation_id || undefined
+        });
+      }
+
+      // 4. SSE Stream anfordern
+      const response = await fetch(`${this.agentsUrl}/${agentId}/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userText,
-          conversation_id: conversationId,
-          agent_id: agentId,
-          agent_name: agentName,
-          user_id: userId
-        })
+        headers,
+        body
       });
 
       if (!response.ok) {
@@ -205,17 +175,16 @@ export class ApiChatService {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        
         const events = buffer.split('\n\n');
         buffer = events.pop() ?? '';
 
         for (const event of events) {
-          this.processSseEvent(event, tempAgentMsgId);
+          this.processSseEvent(event, tempAgentMsgId, onNewConvCreated);
         }
       }
 
       if (buffer.trim()) {
-        this.processSseEvent(buffer, tempAgentMsgId);
+        this.processSseEvent(buffer, tempAgentMsgId, onNewConvCreated);
       }
     } catch (err: unknown) {
       console.error('Streaming error occurred:', err);
@@ -226,9 +195,13 @@ export class ApiChatService {
   }
 
   /**
-   * Extracts data payload from SSE event string and dispatches to text or attachments.
+   * Processes individual SSE events (meta, task chains, attachments, plain text chunks).
    */
-  private processSseEvent(rawEvent: string, messageId: string): void {
+  private processSseEvent(
+    rawEvent: string,
+    messageId: string,
+    onNewConvCreated?: (newId: string) => void
+  ): void {
     const lines = rawEvent.split('\n');
     const dataLines: string[] = [];
 
@@ -252,7 +225,29 @@ export class ApiChatService {
       return;
     }
 
-    // 1. Attachments handling
+    // 1. Meta-Event Handling (Erstes Event mit Server-generierter conversation_id & user_message_id)
+    try {
+      if (content.startsWith('{')) {
+        const parsed = JSON.parse(content);
+        if (parsed.type === 'meta' && parsed.data?.conversation_id) {
+          const newConvId = parsed.data.conversation_id;
+          
+          // Aktualisiere conversation_id in allen temporären UI-Nachrichten
+          this.messages.update((prev) =>
+            prev.map((m) => (!m.conversation_id ? { ...m, conversation_id: newConvId } : m))
+          );
+
+          if (onNewConvCreated) {
+            onNewConvCreated(newConvId);
+          }
+          return;
+        }
+      }
+    } catch {
+      // Kein Meta-JSON, normal weiterverarbeiten
+    }
+
+    // 2. Attachments handling
     if (content.includes('__ATTACHMENTS__:')) {
       const jsonStart = content.indexOf('__ATTACHMENTS__:') + '__ATTACHMENTS__:'.length;
       const jsonStr = content.substring(jsonStart).trim();
@@ -274,7 +269,7 @@ export class ApiChatService {
       return;
     }
 
-    // 2. Task chain handling
+    // 3. Task chain handling
     if (content.includes('__TASK_CHAIN__:')) {
       const jsonStart = content.indexOf('__TASK_CHAIN__:') + '__TASK_CHAIN__:'.length;
       const jsonStr = content.substring(jsonStart).trim();
@@ -303,7 +298,6 @@ export class ApiChatService {
             prev.map((m) => {
               if (m.id !== messageId || !m.taskPhases || m.taskPhases.length === 0) return m;
 
-              // Wir aktualisieren den Step in der neuesten/aktiven Phase
               const updatedPhases = [...m.taskPhases];
               const lastPhaseIndex = updatedPhases.length - 1;
               const targetPhase = updatedPhases[lastPhaseIndex];
@@ -324,7 +318,7 @@ export class ApiChatService {
       return;
     }
 
-    // 3. Normal text stream
+    // 4. Normal text stream
     this.messages.update((prev) =>
       prev.map((m) =>
         m.id === messageId ? { ...m, text: m.text + content } : m

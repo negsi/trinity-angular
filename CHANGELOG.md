@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.1.1] - 2026-08-22
+
+### Added
+
+- Integrated optimistic UI message appending and single-pipeline SSE streaming directly via `POST /api/v1/agents/<agent_id>/stream` in `ApiChatService`.
+- Added real-time handling for incoming stream `meta` events to dynamically bind backend-generated `conversation_id`s to temporary UI messages.
+
+### Changed
+
+- Refactored `sendMessage` in `ApiChatService` to accept optional DTO fields and dispatch `FormData` or JSON payloads directly to the agent stream endpoint.
+- Updated `SendMessageDto` interface to mark all sender and text properties as optional to align with backend context derivation.
+- Handled unhandled promises in `ChatWorkspaceComponent` by adding `void` operators to `sendMessage` calls.
+
 ## [0.1.0] - 2026-08-18
 
 ### Added
@@ -126,7 +139,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.0...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.1...develop
+[0.1.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.1
 [0.1.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.0
 [0.0.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.9
 [0.0.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.8
