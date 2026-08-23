@@ -10,6 +10,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.1.2] - 2026-08-23
+
+### Added
+
+- **Typed Reactive Forms:** Integrated `FormGroup<AgentForm>` in `AgentConfigComponent` for structured state management, input validation, and cleaner form resets.
+- **Dedicated SSE Parsing Utility:** Introduced `SseDecoder` utility class to encapsulate event extraction, task chain updates, and attachment stream processing.
+- **Stream Cancellation Support:** Added `AbortController` integration in `ApiChatService` to cleanly abort ongoing SSE streams when switching agents or clearing conversations.
+- **Dynamic User Context Integration:** Connected chat messaging payload properties (`sender_id`, `sender_name`) directly to `UserContextService`.
+
+### Changed
+
+- **Codebase Aggregation Filter:** Updated `concat_code.py` to exclude `.html` and `.scss` files, restricting output context exclusively to `.ts` and `.json` files.
+- **Datasource API Refactoring:** Moved `uploadDatasource` method from `ApiAgentService` into `DatasourceService` to enforce single responsibility principles.
+- **Race-Condition Prevention:** Converted agent selection handling in `ChatWorkspaceComponent` to an RxJS pipeline using `toObservable` and `switchMap`.
+- **Zoneless Render Timing:** Replaced `setTimeout` calls with Angular's native `afterNextRender` lifecycle hook for post-rendering focus and auto-scroll behaviors.
+- **Avatar Utility Extraction:** Extracted `getInitials` and `getAvatarBg` helper functions from `AgentListComponent` into a standalone `avatar.util` module.
+
 ## [0.1.1] - 2026-08-22
 
 ### Added
