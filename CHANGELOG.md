@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+## [0.1.2] - 2026-08-23
+
+### Added
+
 - **Typed Reactive Forms:** Integrated `FormGroup<AgentForm>` in `AgentConfigComponent` for structured state management, input validation, and cleaner form resets.
 - **Dedicated SSE Parsing Utility:** Introduced `SseDecoder` utility class to encapsulate event extraction, task chain updates, and attachment stream processing.
 - **Stream Cancellation Support:** Added `AbortController` integration in `ApiChatService` to cleanly abort ongoing SSE streams when switching agents or clearing conversations.
