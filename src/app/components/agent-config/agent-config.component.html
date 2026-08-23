@@ -1,4 +1,4 @@
-<form class="config-container" [class.light-mode]="isLightMode()" (ngSubmit)="onSave()">
+<form class="config-container" [class.light-mode]="isLightMode()" [formGroup]="agentForm" (ngSubmit)="onSave()">
 
   <div class="config-header">
     <div class="header-title">
@@ -18,9 +18,7 @@
           id="agentNameInput"
           type="text" 
           class="custom-input" 
-          name="agentName"
-          [ngModel]="agentName()" 
-          (ngModelChange)="agentName.set($event)"
+          formControlName="name"
           required
         />
       </div>
@@ -32,9 +30,7 @@
           id="agentDescInput"
           class="custom-textarea" 
           rows="1"
-          name="agentDescription"
-          [ngModel]="agentDescription()" 
-          (ngModelChange)="agentDescription.set($event)"
+          formControlName="description"
         ></textarea>
       </div>
     </div>
@@ -57,9 +53,7 @@
 
       <textarea 
         class="prompt-textarea" 
-        name="systemPrompt"
-        [ngModel]="systemPrompt()" 
-        (ngModelChange)="systemPrompt.set($event)"
+        formControlName="system_prompt"
         placeholder="Enter System Prompt..."
       ></textarea>
     </div>
@@ -72,22 +66,19 @@
           <span class="memory-label">MEMORY & CONTEXT</span>
         </div>
         <mat-slide-toggle 
-          [checked]="memoryEnabled()" 
-          (change)="memoryEnabled.set($event.checked)"
+          formControlName="memory_enabled"
           color="primary">
         </mat-slide-toggle>
       </div>
 
-      @if (memoryEnabled()) {
+      @if (agentForm.controls.memory_enabled.value) {
         <div class="memory-options">
           <!-- MODE -->
           <div class="field-row">
             <label class="field-label">MODE</label>
             <mat-select 
               class="custom-select" 
-              [ngModel]="memoryMode()" 
-              (ngModelChange)="memoryMode.set($event)"
-              name="memoryMode">
+              formControlName="memory_mode">
               <mat-option value="user_only">User Messages Only</mat-option>
               <mat-option value="all">Full Conversation (User & Agent)</mat-option>
             </mat-select>
@@ -99,20 +90,16 @@
             <div class="limit-group">
               <mat-select 
                 class="custom-select" 
-                [ngModel]="memoryLimitType()" 
-                (ngModelChange)="memoryLimitType.set($event)"
-                name="memoryLimitType">
+                formControlName="memory_limit_type">
                 <mat-option value="all">Unlimited History</mat-option>
                 <mat-option value="message_count">Last N Messages</mat-option>
               </mat-select>
 
-              @if (memoryLimitType() === 'message_count') {
+              @if (agentForm.controls.memory_limit_type.value === 'message_count') {
                 <input 
                   type="number" 
                   class="custom-input count-input" 
-                  name="memoryMessageCount"
-                  [ngModel]="memoryMessageCount()" 
-                  (ngModelChange)="memoryMessageCount.set($event)"
+                  formControlName="memory_message_count"
                   min="1"
                   max="100"
                   placeholder="Count"
