@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiAgentService } from '../../services/agent.service';
 import { Agent } from '../../models/agent.model';
+import { getInitials, getAvatarColor } from '../../utils/avatar.util';
 
 @Component({
   selector: 'app-agent-list',
@@ -16,26 +17,24 @@ import { Agent } from '../../models/agent.model';
 export class AgentListComponent implements OnInit {
   private readonly COLLAPSE_KEY = 'trinity_agent_list_collapsed';
 
-  // 1. Input Signal
-  isLightMode = input.required<boolean>();
+  readonly isLightMode = input.required<boolean>();
+  readonly isCollapsed = signal<boolean>(this.getInitialCollapseState());
 
-  // 2. Collapse State Signal (aus localStorage lesen)
-  isCollapsed = signal<boolean>(this.getInitialCollapseState());
+  readonly agentService = inject(ApiAgentService);
 
-  // 3. Public Service Inject
-  public agentService = inject(ApiAgentService);
+  readonly getInitials = getInitials;
+  readonly getAvatarBg = getAvatarColor;
 
   ngOnInit(): void {
     this.agentService.loadAgents();
   }
 
   private getInitialCollapseState(): boolean {
-    const savedState = localStorage.getItem(this.COLLAPSE_KEY);
-    return savedState === 'true';
+    return localStorage.getItem(this.COLLAPSE_KEY) === 'true';
   }
 
   toggleCollapse(): void {
-    this.isCollapsed.update(val => {
+    this.isCollapsed.update((val) => {
       const nextState = !val;
       localStorage.setItem(this.COLLAPSE_KEY, String(nextState));
       return nextState;
@@ -44,24 +43,5 @@ export class AgentListComponent implements OnInit {
 
   selectAgent(agent: Agent): void {
     this.agentService.selectAgent(agent);
-  }
-
-  getInitials(name: string): string {
-    if (!name) return 'AG';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
-  }
-
-  getAvatarBg(name: string): string {
-    const initials = this.getInitials(name);
-    let hash = 0;
-    for (let i = 0; i < initials.length; i++) {
-      hash = initials.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 75%, 42%)`;
   }
 }

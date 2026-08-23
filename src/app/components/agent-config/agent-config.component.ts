@@ -1,6 +1,6 @@
-import { Component, ElementRef, input, signal, inject, effect, viewChild } from '@angular/core';
+import { Component, ElementRef, input, signal, inject, effect, viewChild, Injector, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -11,15 +11,25 @@ import { DatasourceUI, DatasourceUploadResponse } from '../../models/datasource.
 import { SkillOption, CreateAgentDto, UpdateAgentDto } from '../../models/agent.model';
 import { formatBytes, determineFileType } from '../../utils/file.util';
 
+export interface AgentForm {
+  name: FormControl<string>;
+  description: FormControl<string>;
+  system_prompt: FormControl<string>;
+  memory_enabled: FormControl<boolean>;
+  memory_mode: FormControl<'user_only' | 'all'>;
+  memory_limit_type: FormControl<'all' | 'message_count'>;
+  memory_message_count: FormControl<number | null>;
+}
+
 /**
- * Settings and configuration panel for customizing AI agents.
+ * Settings and configuration panel for customizing AI agents with typed reactive forms.
  */
 @Component({
   selector: 'app-agent-config',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     MatIconModule,
     MatButtonModule,
     MatSlideToggleModule,
@@ -32,20 +42,24 @@ export class AgentConfigComponent {
   /** Mode indicator signal */
   readonly isLightMode = input.required<boolean>();
 
+  private readonly fb = inject(FormBuilder);
+  private readonly injector = inject(Injector);
   private readonly datasourceService = inject(DatasourceService);
   readonly agentService = inject(ApiAgentService);
 
   /** Reference to the agent name text input */
   readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
-  // Reactive Form State Signals
-  readonly agentName = signal<string>('');
-  readonly agentDescription = signal<string>('');
-  readonly systemPrompt = signal<string>('');
-  readonly memoryEnabled = signal<boolean>(false);
-  readonly memoryMode = signal<'user_only' | 'all'>('user_only');
-  readonly memoryLimitType = signal<'all' | 'message_count'>('all');
-  readonly memoryMessageCount = signal<number | null>(10);
+  /** Typed reactive form group */
+  readonly agentForm: FormGroup<AgentForm> = this.fb.group({
+    name: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    description: this.fb.control('', { nonNullable: true }),
+    system_prompt: this.fb.control('', { nonNullable: true }),
+    memory_enabled: this.fb.control(false, { nonNullable: true }),
+    memory_mode: this.fb.control<'user_only' | 'all'>('user_only', { nonNullable: true }),
+    memory_limit_type: this.fb.control<'all' | 'message_count'>('all', { nonNullable: true }),
+    memory_message_count: this.fb.control<number | null>(10)
+  });
 
   /** Upload status and datasource items signals */
   readonly dataSources = signal<DatasourceUI[]>([]);
@@ -66,16 +80,20 @@ export class AgentConfigComponent {
   ]);
 
   constructor() {
+    // Synchronize agent state with the form on selection change
     effect(() => {
       const selected = this.agentService.selectedAgent();
+
       if (selected) {
-        this.agentName.set(selected.name || '');
-        this.agentDescription.set(selected.description || '');
-        this.systemPrompt.set(selected.system_prompt || '');
-        this.memoryEnabled.set(selected.memory_enabled ?? false);
-        this.memoryMode.set(selected.memory_mode || 'user_only');
-        this.memoryLimitType.set(selected.memory_limit_type || 'all');
-        this.memoryMessageCount.set(selected.memory_message_count ?? 10);
+        this.agentForm.reset({
+          name: selected.name || '',
+          description: selected.description || '',
+          system_prompt: selected.system_prompt || '',
+          memory_enabled: selected.memory_enabled ?? false,
+          memory_mode: selected.memory_mode || 'user_only',
+          memory_limit_type: selected.memory_limit_type || 'all',
+          memory_message_count: selected.memory_message_count ?? 10
+        });
 
         const activeSystemNames = new Set(selected.skills?.map((s) => s.system_name) || []);
         this.skills.update((list) =>
@@ -134,11 +152,7 @@ export class AgentConfigComponent {
     this.isUploading.set(true);
 
     files.forEach((file) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', file.name);
-
-      this.agentService.uploadDatasource(agentId, formData).subscribe({
+      this.datasourceService.uploadDatasource(agentId, file).subscribe({
         next: (res: DatasourceUploadResponse) => {
           this.dataSources.update((current) => [
             ...current,
@@ -162,28 +176,40 @@ export class AgentConfigComponent {
    * Saves the current form as either a new agent or an updated record.
    */
   onSave(): void {
+    if (this.agentForm.invalid) {
+      this.agentForm.markAllAsTouched();
+      return;
+    }
+
+    const formValue = this.agentForm.getRawValue();
     const selected = this.agentService.selectedAgent();
 
     const payload: CreateAgentDto = {
-      name: this.agentName(),
-      description: this.agentDescription(),
-      system_prompt: this.systemPrompt(),
+      name: formValue.name,
+      description: formValue.description,
+      system_prompt: formValue.system_prompt,
       skills: this.skills().filter((s) => s.selected).map((s) => s.systemName),
-      memory_enabled: this.memoryEnabled(),
-      memory_mode: this.memoryMode(),
-      memory_limit_type: this.memoryLimitType(),
+      memory_enabled: formValue.memory_enabled,
+      memory_mode: formValue.memory_mode,
+      memory_limit_type: formValue.memory_limit_type,
       memory_message_count:
-        this.memoryLimitType() === 'message_count' ? this.memoryMessageCount() : null
+        formValue.memory_limit_type === 'message_count' ? formValue.memory_message_count : null
     };
 
     if (selected) {
       this.agentService.updateAgent(selected.id, payload as UpdateAgentDto).subscribe({
-        next: () => console.log('Agent updated successfully.'),
+        next: () => {
+          this.agentForm.markAsPristine();
+          console.log('Agent updated successfully.');
+        },
         error: (err: unknown) => console.error('Error updating agent:', err)
       });
     } else {
       this.agentService.createAgent(payload).subscribe({
-        next: () => console.log('Agent created successfully.'),
+        next: () => {
+          this.agentForm.markAsPristine();
+          console.log('Agent created successfully.');
+        },
         error: (err: unknown) => console.error('Error creating agent:', err)
       });
     }
@@ -202,13 +228,15 @@ export class AgentConfigComponent {
    * Resets the entire configuration form back to default state.
    */
   resetForm(): void {
-    this.agentName.set('');
-    this.agentDescription.set('');
-    this.systemPrompt.set('');
-    this.memoryEnabled.set(false);
-    this.memoryMode.set('user_only');
-    this.memoryLimitType.set('all');
-    this.memoryMessageCount.set(10);
+    this.agentForm.reset({
+      name: '',
+      description: '',
+      system_prompt: '',
+      memory_enabled: false,
+      memory_mode: 'user_only',
+      memory_limit_type: 'all',
+      memory_message_count: 10
+    });
 
     this.skills.update((skills) =>
       skills.map((s) => ({ ...s, selected: false }))
@@ -216,9 +244,12 @@ export class AgentConfigComponent {
 
     this.dataSources.set([]);
 
-    setTimeout(() => {
-      this.nameInput()?.nativeElement.focus();
-    }, 0);
+    afterNextRender(
+      () => {
+        this.nameInput()?.nativeElement.focus();
+      },
+      { injector: this.injector }
+    );
   }
 
   /**

@@ -6,7 +6,10 @@ import {
   effect,
   computed,
   viewChild,
-  ElementRef
+  ElementRef,
+  afterNextRender,
+  Injector,
+  DestroyRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,8 +17,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarkdownModule } from 'ngx-markdown';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { filter, switchMap } from 'rxjs';
+
 import { ApiAgentService } from '../../services/agent.service';
 import { ApiChatService } from '../../services/chat.service';
+import { UserContextService } from '../../services/user-context.service';
 import { SendMessageDto, ChatMessageUI, MessageGroup } from '../../models/message.model';
 import { ConversationUI } from '../../models/conversation.model';
 import { ConversationDrawerComponent } from '../conversation-drawer/conversation-drawer.component';
@@ -24,7 +31,7 @@ import { formatDateLabel } from '../../utils/date.util';
 import { stripMarkdown } from '../../utils/text.util';
 
 /**
- * Main chat interaction area for conversing with active AI agents.
+ * Main chat workspace component orchestrating streaming interaction and message rendering.
  */
 @Component({
   selector: 'app-chat-workspace',
@@ -45,6 +52,9 @@ export class ChatWorkspaceComponent {
   /** Mode indicator signal */
   readonly isLightMode = input.required<boolean>();
 
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly userService = inject(UserContextService);
   readonly agentService = inject(ApiAgentService);
   readonly chatService = inject(ApiChatService);
 
@@ -113,19 +123,25 @@ export class ChatWorkspaceComponent {
   });
 
   constructor() {
-    // Automatically load conversations when selected agent changes
-    effect(() => {
-      const selected = this.agentService.selectedAgent();
-      if (!selected) return;
-
-      this.chatService.getConversations(selected.id).subscribe({
+    // Race-condition-free conversation loading when active agent changes
+    toObservable(this.agentService.selectedAgent)
+      .pipe(
+        filter((agent) => !!agent),
+        switchMap((agent) => {
+          this.chatService.cancelActiveStream();
+          return this.chatService.getConversations(agent!.id);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
         next: (convs: ConversationUI[]) => {
           this.conversationsList.set(convs);
+          const activeAgent = this.agentService.selectedAgent();
 
-          if (convs && convs.length > 0) {
+          if (convs && convs.length > 0 && activeAgent) {
             const latestConv = convs[0];
             this.activeConversationId.set(latestConv.id);
-            this.chatService.loadMessages(selected.id, latestConv.id);
+            this.chatService.loadMessages(activeAgent.id, latestConv.id);
           } else {
             this.activeConversationId.set(null);
             this.chatService.clearMessages();
@@ -137,12 +153,16 @@ export class ChatWorkspaceComponent {
           this.chatService.clearMessages();
         }
       });
-    });
 
-    // Auto-scroll when messages update
+    // Native Zoneless Auto-Scroll: executes directly after layout rendering completes
     effect(() => {
       this.messageGroups();
-      setTimeout(() => this.scrollToBottom(), 0);
+      afterNextRender(
+        () => {
+          this.scrollToBottom();
+        },
+        { injector: this.injector }
+      );
     });
   }
 
@@ -182,9 +202,12 @@ export class ChatWorkspaceComponent {
     this.chatService.clearMessages();
     this.isDrawerOpen.set(false);
 
-    setTimeout(() => {
-      this.chatTextarea()?.nativeElement.focus();
-    }, 0);
+    afterNextRender(
+      () => {
+        this.chatTextarea()?.nativeElement.focus();
+      },
+      { injector: this.injector }
+    );
   }
 
   onFilesSelected(event: Event): void {
@@ -228,14 +251,15 @@ export class ChatWorkspaceComponent {
     const text = this.currentInput().trim();
     const files = this.selectedFiles();
     const activeAgent = this.agentService.selectedAgent();
+    const user = this.userService.currentUser();
 
     if ((!text && files.length === 0) || !activeAgent) return;
 
     const payload: SendMessageDto = {
       conversation_id: this.activeConversationId() ?? undefined,
-      sender_id: 'user-christian',
+      sender_id: user.id,
       sender_type: 'user',
-      sender_name: 'Christian',
+      sender_name: user.name,
       text: text,
       recipient_id: activeAgent.id
     };
@@ -270,13 +294,14 @@ export class ChatWorkspaceComponent {
 
   resendMessage(msgText: string): void {
     const activeAgent = this.agentService.selectedAgent();
+    const user = this.userService.currentUser();
     if (!activeAgent || !msgText) return;
 
     const payload: SendMessageDto = {
       conversation_id: this.activeConversationId() ?? undefined,
-      sender_id: 'user-christian',
+      sender_id: user.id,
       sender_type: 'user',
-      sender_name: 'Christian',
+      sender_name: user.name,
       text: msgText,
       recipient_id: activeAgent.id
     };

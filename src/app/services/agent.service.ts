@@ -2,10 +2,9 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { Agent, CreateAgentDto, UpdateAgentDto } from '../models/agent.model';
-import { DatasourceUploadResponse } from '../models/datasource.model';
 
 /**
- * Core service managing agent entities and selection states.
+ * Core service managing agent entities and active workspace selection state.
  */
 @Injectable({
   providedIn: 'root'
@@ -130,19 +129,5 @@ export class ApiAgentService {
         console.error('Failed to delete agent:', err);
       }
     });
-  }
-
-  /**
-   * Uploads a file datasource for a specific agent.
-   *
-   * @param agentId - The agent ID to attach the file to.
-   * @param formData - FormData payload containing the file.
-   * @returns Observable emitting the uploaded datasource metadata.
-   */
-  uploadDatasource(agentId: string, formData: FormData): Observable<DatasourceUploadResponse> {
-    return this.http.post<DatasourceUploadResponse>(
-      `${this.baseUrl}/${agentId}/datasources`,
-      formData
-    );
   }
 }
