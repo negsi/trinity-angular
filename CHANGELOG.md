@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.1.3] - 2026-08-23
+
+### Fixed
+
+- **Agent Config Form Binding:** Fixed Angular compilation error (`TS2339`) by replacing non-existent signal bindings (`ngModel`) with `formControlName` and `formGroup` bindings for reactive form integration.
+
 ## [0.1.2] - 2026-08-23
 
 ### Added
@@ -156,7 +162,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.1...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.3...develop
+[0.1.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.3
+[0.1.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.2
 [0.1.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.1
 [0.1.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.0
 [0.0.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.0.9
