@@ -156,13 +156,15 @@ export class ChatWorkspaceComponent {
 
     // Native Zoneless Auto-Scroll: executes directly after layout rendering completes
     effect(() => {
-      this.messageGroups();
-      afterNextRender(
-        () => {
+      // Signal lesen, um den Effect bei jeder Änderung zu triggern
+      const groups = this.messageGroups();
+
+      if (groups.length > 0) {
+        // Warten bis der Browser das DOM nach dem Signal-Update neu gerendert hat
+        requestAnimationFrame(() => {
           this.scrollToBottom();
-        },
-        { injector: this.injector }
-      );
+        });
+      }
     });
   }
 

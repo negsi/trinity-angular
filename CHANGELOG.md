@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+### Fixed
+
+- Fixed auto-scroll functionality in `ChatWorkspaceComponent` when loading messages by replacing `afterNextRender` inside the Signal `effect` with `requestAnimationFrame`[cite: 8].
+
 ## [0.1.3] - 2026-08-23
 
 ### Fixed
