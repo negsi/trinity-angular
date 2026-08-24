@@ -26,6 +26,7 @@ import { UserContextService } from '../../services/user-context.service';
 import { SendMessageDto, ChatMessageUI, MessageGroup } from '../../models/message.model';
 import { ConversationUI } from '../../models/conversation.model';
 import { ConversationDrawerComponent } from '../conversation-drawer/conversation-drawer.component';
+import { TaskChainListComponent } from '../task-chain-list/task-chain-list.component';
 import { getInitials, getAvatarColor } from '../../utils/avatar.util';
 import { formatDateLabel } from '../../utils/date.util';
 import { stripMarkdown } from '../../utils/text.util';
@@ -43,7 +44,8 @@ import { stripMarkdown } from '../../utils/text.util';
     MatButtonModule,
     MatTooltipModule,
     MarkdownModule,
-    ConversationDrawerComponent
+    ConversationDrawerComponent,
+    TaskChainListComponent
   ],
   templateUrl: './chat-workspace.component.html',
   styleUrl: './chat-workspace.component.scss'

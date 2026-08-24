@@ -4,8 +4,8 @@ import { TaskItem, TaskStatus } from '../models/task-chain.model';
 export type SseParsedEvent =
   | { type: 'meta'; conversationId: string }
   | { type: 'attachments'; attachments: MessageAttachment[] }
-  | { type: 'task_chain_init'; steps: TaskItem[] }
-  | { type: 'task_step_update'; stepNumber: number; status: TaskStatus }
+  | { type: 'task_chain_init'; steps: TaskItem[]; callDepth?: number; agentId?: string }
+  | { type: 'task_step_update'; stepNumber: number; status: TaskStatus; callDepth?: number }
   | { type: 'text_chunk'; text: string }
   | { type: 'done' };
 
@@ -68,18 +68,33 @@ export class SseDecoder {
     }
 
     // 3. Task Chain Events
+    // 3. Task Chain Events
     if (content.includes('__TASK_CHAIN__:')) {
       const jsonStart = content.indexOf('__TASK_CHAIN__:') + '__TASK_CHAIN__:'.length;
       try {
         const payload = JSON.parse(content.substring(jsonStart).trim());
         if (payload.type === 'task_chain_init' && Array.isArray(payload.steps)) {
-          return { type: 'task_chain_init', steps: payload.steps };
+          const normalizedSteps: TaskItem[] = payload.steps.map((s: Record<string, unknown>) => ({
+            step_number: (s['step_number'] ?? s['step']) as number,
+            description: (s['description'] as string) ?? '',
+            tool_name: (s['tool_name'] ?? s['tool']) as string | undefined,
+            parameters: (s['parameters'] ?? s['params']) as Record<string, unknown> | undefined,
+            status: (s['status'] as TaskStatus) ?? 'pending'
+          }));
+
+          return {
+            type: 'task_chain_init',
+            steps: normalizedSteps,
+            callDepth: payload.call_depth ?? 0,
+            agentId: payload.agent_id
+          };
         }
         if (payload.type === 'task_step_update') {
           return {
             type: 'task_step_update',
             stepNumber: payload.step_number,
-            status: payload.status
+            status: payload.status,
+            callDepth: payload.call_depth ?? 0
           };
         }
       } catch (err) {
@@ -87,7 +102,6 @@ export class SseDecoder {
       }
     }
 
-    // 4. Plain Text Chunk
     return { type: 'text_chunk', text: content };
   }
 
@@ -97,19 +111,49 @@ export class SseDecoder {
   static applyTaskStepUpdate(
     phases: TaskPhase[],
     stepNumber: number,
-    status: TaskStatus
+    status: TaskStatus,
+    targetDepth: number = 0
   ): TaskPhase[] {
     if (!phases || phases.length === 0) return [];
 
-    const lastIdx = phases.length - 1;
-    const currentPhase = phases[lastIdx];
-
-    const updatedSteps = currentPhase.steps.map((step) =>
-      step.step_number === stepNumber ? { ...step, status } : step
-    );
-
-    const updatedPhases = [...phases];
-    updatedPhases[lastIdx] = { ...currentPhase, steps: updatedSteps };
-    return updatedPhases;
+    return phases.map((phase) => {
+      const phaseDepth = phase.callDepth ?? 0;
+      if (phaseDepth === targetDepth) {
+        const updatedSteps = phase.steps.map((step) => {
+          if (step.step_number === stepNumber) {
+            return { ...step, status };
+          }
+          if (step.subTaskChain) {
+            return {
+              ...step,
+              subTaskChain: SseDecoder.applyTaskStepUpdate(
+                [step.subTaskChain],
+                stepNumber,
+                status,
+                targetDepth
+              )[0]
+            };
+          }
+          return step;
+        });
+        return { ...phase, steps: updatedSteps };
+      } else {
+        const updatedSteps = phase.steps.map((step) => {
+          if (step.subTaskChain) {
+            return {
+              ...step,
+              subTaskChain: SseDecoder.applyTaskStepUpdate(
+                [step.subTaskChain],
+                stepNumber,
+                status,
+                targetDepth
+              )[0]
+            };
+          }
+          return step;
+        });
+        return { ...phase, steps: updatedSteps };
+      }
+    });
   }
 }

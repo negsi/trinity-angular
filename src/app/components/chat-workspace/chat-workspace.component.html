@@ -57,38 +57,7 @@
                   @if (msg.taskPhases && msg.taskPhases.length > 0) {
                     <div class="task-phases-container">
                       @for (phase of msg.taskPhases; track phase.phaseIndex) {
-                        <div class="task-chain-card">
-                          <div class="task-chain-header">
-                            <mat-icon class="chain-icon">alt_route</mat-icon>
-                            <span>Aufgabenplan (Phase {{ phase.phaseIndex }})</span>
-                          </div>
-                          <div class="task-chain-list">
-                            @for (task of phase.steps; track task.step_number) {
-                              <div class="task-item" [class]="task.status">
-                                <span class="status-icon">
-                                  @switch (task.status) {
-                                    @case ('completed') {
-                                      <mat-icon class="icon-success">check_circle</mat-icon>
-                                    }
-                                    @case ('running') {
-                                      <mat-icon class="icon-spinner">sync</mat-icon>
-                                    }
-                                    @case ('pending') {
-                                      <mat-icon class="icon-pending">radio_button_unchecked</mat-icon>
-                                    }
-                                    @case ('failed') {
-                                      <mat-icon class="icon-failed">error</mat-icon>
-                                    }
-                                  }
-                                </span>
-                                <span class="task-desc">{{ task.description }}</span>
-                                @if (task.tool_name) {
-                                  <span class="task-tool-badge">{{ task.tool_name }}</span>
-                                }
-                              </div>
-                            }
-                          </div>
-                        </div>
+                        <app-task-chain-list [phase]="phase"></app-task-chain-list>
                       }
                     </div>
                   }

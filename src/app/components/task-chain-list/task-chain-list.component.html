@@ -1,0 +1,64 @@
+<div class="task-chain-card" [class.is-nested]="(phase().callDepth ?? 0) > 0">
+  <div class="task-chain-header">
+    <mat-icon class="chain-icon">alt_route</mat-icon>
+    <span>Aufgabenplan (Phase {{ phase().phaseIndex }})</span>
+  </div>
+  <div class="task-chain-list">
+    @for (task of phase().steps; track task.step_number) {
+      <div class="task-item" [class]="task.status" [class.is-delegation]="task.tool_name === 'message_agent'">
+        <span class="status-icon">
+          @switch (task.status) {
+            @case ('completed') {
+              <mat-icon class="icon-success">check_circle</mat-icon>
+            }
+            @case ('running') {
+              <mat-icon class="icon-spinner">sync</mat-icon>
+            }
+            @case ('pending') {
+              <mat-icon class="icon-pending">radio_button_unchecked</mat-icon>
+            }
+            @case ('failed') {
+              <mat-icon class="icon-failed">error</mat-icon>
+            }
+          }
+        </span>
+
+        <div class="task-details">
+          <span class="task-desc">{{ task.description }}</span>
+
+          @if (task.tool_name === 'message_agent') {
+            <div class="subagent-delegation-box">
+              <div class="delegation-header">
+                <mat-icon>smart_toy</mat-icon>
+                <span>
+                  Sub-Agent ID: 
+                  <code>
+                    {{ task.parameters?.['target_agent_id'] || task.parameters?.['targetagentid'] || task.parameters?.['agent_id'] || 'Unbekannt' }}
+                  </code>
+                </span>
+              </div>
+              @if (task.parameters?.['message'] || task.parameters?.['instruction']) {
+                <div class="delegation-msg-preview">
+                  "{{ task.parameters?.['message'] || task.parameters?.['instruction'] }}"
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Rekursiver Aufruf für verschachtelte Task-Chains des Sub-Agenten -->
+          @if (task.subTaskChain) {
+            <div class="nested-chain-wrapper">
+              <app-task-chain-list [phase]="task.subTaskChain"></app-task-chain-list>
+            </div>
+          }
+        </div>
+
+        @if (task.tool_name) {
+          <span class="task-tool-badge" [class.agent-badge]="task.tool_name === 'message_agent'">
+            {{ task.tool_name }}
+          </span>
+        }
+      </div>
+    }
+  </div>
+</div>
