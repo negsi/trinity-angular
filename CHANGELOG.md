@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+## [0.1.4] - 2026-08-24
+
+### Added
+
 - Extract task chain step rendering into modular `TaskChainListComponent`.
 - Add support for nested task chain visualization (`callDepth`, `agentId`, and `subTaskChain` structures) to display inter-agent sub-agent delegation.
 - Introduce custom UI styling for nested delegation execution blocks and agent tool badges.
@@ -173,7 +179,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.3...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.4...develop
+[0.1.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.4
 [0.1.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.3
 [0.1.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.2
 [0.1.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.1
