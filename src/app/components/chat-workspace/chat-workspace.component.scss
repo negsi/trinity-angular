@@ -804,3 +804,63 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.task-item.is-delegation {
+  background: rgba(var(--sys-primary-rgb, 99, 102, 241), 0.05);
+  border-left: 3px solid var(--sys-primary, #6366f1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+.subagent-delegation-box {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 6px 10px;
+  border-radius: 4px;
+
+  .delegation-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    code {
+      font-size: 0.8rem;
+      background: rgba(0, 0, 0, 0.06);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+  }
+
+  .delegation-msg-preview {
+    margin-top: 4px;
+    font-style: italic;
+    opacity: 0.85;
+  }
+}
+
+.task-tool-badge.agent-badge {
+  background-color: var(--sys-primary, #6366f1);
+  color: #fff;
+}
+
+.task-chain-card.is-nested {
+  margin-top: 8px;
+  margin-left: 12px;
+  border-left: 2px solid var(--sys-color-primary, #6750a4);
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+.nested-chain-wrapper {
+  margin-top: 8px;
+  width: 100%;
+}

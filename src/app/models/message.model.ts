@@ -14,6 +14,8 @@ export interface MessageAttachment {
 
 export interface TaskPhase {
   phaseIndex: number;
+  callDepth?: number;  
+  agentId?: string;
   steps: TaskItem[];
 }
 

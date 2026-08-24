@@ -4,16 +4,14 @@ export interface TaskItem {
   step_number: number;
   description: string;
   tool_name?: string;
+  parameters?: Record<string, unknown>;
   status: TaskStatus;
+  subTaskChain?: TaskPhase; 
 }
 
-export interface TaskChainInitPayload {
-  type: 'task_chain_init';
+export interface TaskPhase {
+  phaseIndex: number;
+  callDepth?: number;  
+  agentId?: string; 
   steps: TaskItem[];
-}
-
-export interface TaskStepUpdatePayload {
-  type: 'task_step_update';
-  step_number: number;
-  status: TaskStatus;
 }
