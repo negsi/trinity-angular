@@ -16,19 +16,65 @@
   .task-chain-header {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--text-sub, #94a3b8);
-    margin-bottom: 8px;
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 0;
 
-    .chain-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-      color: var(--bubble-me-bg, #3b82f6);
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+
+      .chain-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: var(--bubble-me-bg, #3b82f6);
+
+        &.icon-spinner {
+          animation: spin 1.2s linear infinite;
+        }
+      }
+
+      .header-title {
+        color: var(--text-main, #f8fafc);
+      }
+
+      .progress-indicator {
+        font-weight: 500;
+        text-transform: none;
+        color: var(--text-sub, #94a3b8);
+        font-size: 0.72rem;
+      }
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-sub, #94a3b8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+
+      .chevron-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s ease-in-out;
+
+        &.is-expanded {
+          transform: rotate(180deg);
+        }
+      }
     }
   }
 
@@ -36,6 +82,9 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 
     .task-item {
       display: flex;
@@ -83,7 +132,6 @@
           word-break: break-word;
         }
 
-        /* Sub-Agent Chat-Bubbles Container */
         .sub-agent-chat {
           margin-top: 6px;
           padding: 8px;

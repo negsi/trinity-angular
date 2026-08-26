@@ -8,7 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- **Collapsible Task Chain View**: `TaskChainListComponent` um einklappbare Aufgabenpläne ergänzt (standardmäßig eingeklappt, per Klick erweiterbar).
+- **Progress Indicator**: Dynamische Fortschrittsanzeige im Header mit Live-Schrittzähler (`Schritt X von Y` / `X/Y abgeschlossen`) sowie Spinner-Animation während der aktiven Ausführung.
+
 ### Changed
+
+- Header der Task-Chain-Liste als interaktives Toggle-Element umgestaltet inklusive Chevron-Icon für den Auf-/Zuklapp-Zustand.
 
 ## [0.1.5] - 2026-08-26
 

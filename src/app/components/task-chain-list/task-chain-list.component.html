@@ -1,76 +1,100 @@
 <div class="task-chain-card" [class.is-nested]="(phase().callDepth ?? 0) > 0">
-  <div class="task-chain-header">
-    <mat-icon class="chain-icon">alt_route</mat-icon>
-    <span>Aufgabenplan (Phase {{ phase().phaseIndex }})</span>
+  <div class="task-chain-header" (click)="toggleExpand($event)">
+    <div class="header-left">
+      @if (progressStats().isRunning) {
+        <mat-icon class="chain-icon icon-spinner">sync</mat-icon>
+      } @else {
+        <mat-icon class="chain-icon">alt_route</mat-icon>
+      }
+
+      <span class="header-title">
+        Aufgabenplan (Phase {{ phase().phaseIndex }})
+      </span>
+
+      <span class="progress-indicator">
+        @if (progressStats().isRunning) {
+          — Schritt {{ progressStats().currentStepNumber }} von {{ progressStats().total }}
+        } @else {
+          ({{ progressStats().completed }}/{{ progressStats().total }} abgeschlossen)
+        }
+      </span>
+    </div>
+
+    <button class="toggle-btn" type="button" [attr.aria-label]="isExpanded() ? 'Einklappen' : 'Ausklappen'">
+      <mat-icon class="chevron-icon" [class.is-expanded]="isExpanded()">expand_more</mat-icon>
+    </button>
   </div>
-  <div class="task-chain-list">
-    @for (task of phase().steps; track task.step_number) {
-      <div class="task-item" [class]="task.status" [class.is-delegation]="task.tool_name === 'message_agent'">
-        <span class="status-icon">
-          @switch (task.status) {
-            @case ('completed') {
-              <mat-icon class="icon-success">check_circle</mat-icon>
-            }
-            @case ('running') {
-              <mat-icon class="icon-spinner">sync</mat-icon>
-            }
-            @case ('pending') {
-              <mat-icon class="icon-pending">radio_button_unchecked</mat-icon>
-            }
-            @case ('failed') {
-              <mat-icon class="icon-failed">error</mat-icon>
-            }
-          }
-        </span>
 
-        <div class="task-details">
-          <span class="task-desc">{{ task.description }}</span>
-
-          <!-- Sub-Agent Chat Verlauf (Bubbles) -->
-          @if (task.tool_name === 'message_agent' && (task.parameters?.['message'] || task.result)) {
-            <div class="sub-agent-chat">
-
-              <!-- 1. Gesendete Nachricht / Prompt an Sub-Agent (Outbound) -->
-              @if (task.parameters?.['message']) {
-                <div class="mini-bubble outbound">
-                  <div class="bubble-content">
-                    {{ task.parameters['message'] }}
-                  </div>
-                </div>
+  @if (isExpanded()) {
+    <div class="task-chain-list">
+      @for (task of phase().steps; track task.step_number) {
+        <div class="task-item" [class]="task.status" [class.is-delegation]="task.tool_name === 'message_agent'">
+          <span class="status-icon">
+            @switch (task.status) {
+              @case ('completed') {
+                <mat-icon class="icon-success">check_circle</mat-icon>
               }
+              @case ('running') {
+                <mat-icon class="icon-spinner">sync</mat-icon>
+              }
+              @case ('pending') {
+                <mat-icon class="icon-pending">radio_button_unchecked</mat-icon>
+              }
+              @case ('failed') {
+                <mat-icon class="icon-failed">error</mat-icon>
+              }
+            }
+          </span>
 
-              <!-- 2. Antwort des Sub-Agenten (Inbound mit Avatar) -->
-              @if (task.result) {
-                @let agentName = getAgentName(task.parameters);
-                <div class="mini-bubble inbound">
-                  <div class="avatar" [style.background-color]="getAvatarBg(agentName)">
-                    {{ getInitials(agentName) }}
-                  </div>
-                  <div class="bubble-content">
-                    <div class="bubble-text">
-                      {{ $any(task.result)?.response || task.result }}
+          <div class="task-details">
+            <span class="task-desc">{{ task.description }}</span>
+
+            <!-- Sub-Agent Chat Verlauf (Bubbles) -->
+            @if (task.tool_name === 'message_agent' && (task.parameters?.['message'] || task.result)) {
+              <div class="sub-agent-chat">
+
+                <!-- 1. Gesendete Nachricht / Prompt an Sub-Agent (Outbound) -->
+                @if (task.parameters?.['message']) {
+                  <div class="mini-bubble outbound">
+                    <div class="bubble-content">
+                      {{ task.parameters['message'] }}
                     </div>
                   </div>
-                </div>
-              }
+                }
 
-            </div>
-          }
+                <!-- 2. Antwort des Sub-Agenten (Inbound mit Avatar) -->
+                @if (task.result) {
+                  @let agentName = getAgentName(task.parameters);
+                  <div class="mini-bubble inbound">
+                    <div class="avatar" [style.background-color]="getAvatarBg(agentName)">
+                      {{ getInitials(agentName) }}
+                    </div>
+                    <div class="bubble-content">
+                      <div class="bubble-text">
+                        {{ $any(task.result)?.response || task.result }}
+                      </div>
+                    </div>
+                  </div>
+                }
 
-          <!-- Rekursiver Aufruf für verschachtelte Task-Chains des Sub-Agenten -->
-          @if (task.subTaskChain) {
-            <div class="nested-chain-wrapper">
-              <app-task-chain-list [phase]="task.subTaskChain"></app-task-chain-list>
-            </div>
+              </div>
+            }
+
+            <!-- Rekursiver Aufruf für verschachtelte Task-Chains des Sub-Agenten -->
+            @if (task.subTaskChain) {
+              <div class="nested-chain-wrapper">
+                <app-task-chain-list [phase]="task.subTaskChain"></app-task-chain-list>
+              </div>
+            }
+          </div>
+
+          @if (task.tool_name) {
+            <span class="task-tool-badge" [class.agent-badge]="task.tool_name === 'message_agent'">
+              {{ task.tool_name }}
+            </span>
           }
         </div>
-
-        @if (task.tool_name) {
-          <span class="task-tool-badge" [class.agent-badge]="task.tool_name === 'message_agent'">
-            {{ task.tool_name }}
-          </span>
-        }
-      </div>
-    }
-  </div>
+      }
+    </div>
+  }
 </div>
