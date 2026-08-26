@@ -8,12 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- **Collapsible Task Chain View**: `TaskChainListComponent` um einklappbare Aufgabenpläne ergänzt (standardmäßig eingeklappt, per Klick erweiterbar).
-- **Progress Indicator**: Dynamische Fortschrittsanzeige im Header mit Live-Schrittzähler (`Schritt X von Y` / `X/Y abgeschlossen`) sowie Spinner-Animation während der aktiven Ausführung.
+- **Smart Auto-Scrolling**: Added threshold-based auto-scroll logic in `ChatWorkspaceComponent`. Scrolling pauses automatically when the user scrolls up during message streaming and resumes when returning to the bottom.
+- **Collapsible Task Chain View**: Enhanced `TaskChainListComponent` with collapsible task execution plans (collapsed by default, expandable via click).
+- **Progress Indicator**: Dynamic progress indicator in the task chain header with live step counter (`Step X of Y` / `X/Y completed`) and a spinner animation during active execution.
 
 ### Changed
 
-- Header der Task-Chain-Liste als interaktives Toggle-Element umgestaltet inklusive Chevron-Icon für den Auf-/Zuklapp-Zustand.
+- **Scroll Event Binding**: Added scroll event tracking to the chat messages container to monitor user scroll position.
+- **Task Chain Header Interaction**: Redesigned the task chain header into an interactive toggle element featuring a chevron icon indicating the expanded/collapsed state.
 
 ## [0.1.5] - 2026-08-26
 
