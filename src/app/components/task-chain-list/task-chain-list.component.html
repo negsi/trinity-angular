@@ -26,22 +26,34 @@
         <div class="task-details">
           <span class="task-desc">{{ task.description }}</span>
 
-          @if (task.tool_name === 'message_agent') {
-            <div class="subagent-delegation-box">
-              <div class="delegation-header">
-                <mat-icon>smart_toy</mat-icon>
-                <span>
-                  Sub-Agent ID: 
-                  <code>
-                    {{ task.parameters?.['target_agent_id'] || task.parameters?.['targetagentid'] || task.parameters?.['agent_id'] || 'Unbekannt' }}
-                  </code>
-                </span>
-              </div>
-              @if (task.parameters?.['message'] || task.parameters?.['instruction']) {
-                <div class="delegation-msg-preview">
-                  "{{ task.parameters?.['message'] || task.parameters?.['instruction'] }}"
+          <!-- Sub-Agent Chat Verlauf (Bubbles) -->
+          @if (task.tool_name === 'message_agent' && (task.parameters?.['message'] || task.result)) {
+            <div class="sub-agent-chat">
+
+              <!-- 1. Gesendete Nachricht / Prompt an Sub-Agent (Outbound) -->
+              @if (task.parameters?.['message']) {
+                <div class="mini-bubble outbound">
+                  <div class="bubble-content">
+                    {{ task.parameters['message'] }}
+                  </div>
                 </div>
               }
+
+              <!-- 2. Antwort des Sub-Agenten (Inbound mit Avatar) -->
+              @if (task.result) {
+                @let agentName = getAgentName(task.parameters);
+                <div class="mini-bubble inbound">
+                  <div class="avatar" [style.background-color]="getAvatarBg(agentName)">
+                    {{ getInitials(agentName) }}
+                  </div>
+                  <div class="bubble-content">
+                    <div class="bubble-text">
+                      {{ $any(task.result)?.response || task.result }}
+                    </div>
+                  </div>
+                </div>
+              }
+
             </div>
           }
 

@@ -5,6 +5,7 @@ export interface TaskItem {
   description: string;
   tool_name?: string;
   parameters?: Record<string, unknown>;
+  result?: string | Record<string, unknown>;
   status: TaskStatus;
   subTaskChain?: TaskPhase; 
 }

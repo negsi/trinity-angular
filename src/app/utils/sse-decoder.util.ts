@@ -5,7 +5,7 @@ export type SseParsedEvent =
   | { type: 'meta'; conversationId: string }
   | { type: 'attachments'; attachments: MessageAttachment[] }
   | { type: 'task_chain_init'; steps: TaskItem[]; callDepth?: number; agentId?: string }
-  | { type: 'task_step_update'; stepNumber: number; status: TaskStatus; callDepth?: number }
+  | { type: 'task_step_update'; stepNumber: number; status: TaskStatus; result?: string; callDepth?: number }
   | { type: 'text_chunk'; text: string }
   | { type: 'done' };
 
@@ -94,6 +94,7 @@ export class SseDecoder {
             type: 'task_step_update',
             stepNumber: payload.step_number,
             status: payload.status,
+            result: payload.result,
             callDepth: payload.call_depth ?? 0
           };
         }
@@ -112,48 +113,47 @@ export class SseDecoder {
     phases: TaskPhase[],
     stepNumber: number,
     status: TaskStatus,
-    targetDepth: number = 0
+    targetDepth: number = 0,
+    result?: string | Record<string, unknown>
   ): TaskPhase[] {
     if (!phases || phases.length === 0) return [];
 
     return phases.map((phase) => {
       const phaseDepth = phase.callDepth ?? 0;
-      if (phaseDepth === targetDepth) {
-        const updatedSteps = phase.steps.map((step) => {
-          if (step.step_number === stepNumber) {
-            return { ...step, status };
-          }
-          if (step.subTaskChain) {
-            return {
-              ...step,
-              subTaskChain: SseDecoder.applyTaskStepUpdate(
-                [step.subTaskChain],
-                stepNumber,
-                status,
-                targetDepth
-              )[0]
-            };
-          }
-          return step;
-        });
-        return { ...phase, steps: updatedSteps };
-      } else {
-        const updatedSteps = phase.steps.map((step) => {
-          if (step.subTaskChain) {
-            return {
-              ...step,
-              subTaskChain: SseDecoder.applyTaskStepUpdate(
-                [step.subTaskChain],
-                stepNumber,
-                status,
-                targetDepth
-              )[0]
-            };
-          }
-          return step;
-        });
-        return { ...phase, steps: updatedSteps };
-      }
+      
+      const updatedSteps = phase.steps.map((step) => {
+        // 1. Prüfen, ob dieser Step auf der aktuellen Ebene aktualisiert werden muss
+        if (phaseDepth === targetDepth && step.step_number === stepNumber) {
+          return {
+            ...step,
+            status,
+            ...(result !== undefined ? { result } : {})
+          };
+        }
+
+        // 2. Falls eine verschachtelte Sub-Task-Chain existiert, rekursiv durchreichen
+        if (step.subTaskChain) {
+          const updatedSubPhases = SseDecoder.applyTaskStepUpdate(
+            [step.subTaskChain],
+            stepNumber,
+            status,
+            targetDepth,
+            result
+          );
+
+          return {
+            ...step,
+            subTaskChain: updatedSubPhases[0]
+          };
+        }
+
+        return step;
+      });
+
+      return {
+        ...phase,
+        steps: updatedSteps
+      };
     });
   }
 }

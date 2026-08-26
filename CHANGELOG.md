@@ -8,11 +8,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- **Data Models & Streaming (Task Execution Pipeline):** Extended task tracking structures for step result handling.
+  - Added optional `result` field to `TaskItem` interface in `task-chain-model.ts` to support tool execution outputs.
+  - Extended `SseParsedEvent` (`task_step_update`) in `sse-decoder.util.ts` to capture and stream `result` payloads from SSE events.
+
 ### Changed
+
 - **UI/Layout (Chat Workspace):** Consolidated layout bounds across chat bubbles and Markdown containers to prevent horizontal overflow.
   - Applied `min-width: 0` and `max-width: 100%` constraints to message content containers and `markdown` host elements.
   - Configured `overflow-x: auto`, `white-space: pre`, and standard container padding for HTML `<pre>` elements in code blocks.
   - Adjusted inline code styling (`:not(pre) > code`) to enforce word wrapping and fluid text reflow.
+- **UI/Layout (Task Chain List & Sub-Agent Delegation):** Redesigned sub-agent execution preview from a static code block into an interactive chat-bubble interface.
+  - Replaced legacy `.subagent-delegation-box` with a responsive `.sub-agent-chat` container rendering outbound prompts and inbound agent responses as distinct mini-bubbles.
+  - Integrated `getInitials` and `getAvatarColor` avatar utilities in `TaskChainListComponent` to render dynamic sub-agent avatars.
+  - Implemented `getAgentName()` helper to safely extract target agent identifiers from task parameters with fallback support.
+- **State Management (SSE Decoder):** Optimized recursive step updates across nested task execution phases.
+  - Refactored `SseDecoder.applyTaskStepUpdate()` to immutably project step status and result updates across arbitrary nesting levels (`callDepth`).
 
 ## [0.1.4] - 2026-08-24
 

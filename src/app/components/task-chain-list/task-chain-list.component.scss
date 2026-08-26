@@ -39,7 +39,7 @@
 
     .task-item {
       display: flex;
-      align-items: flex-start; /* Stellt sicher, dass das Status-Icon oben bündig ist */
+      align-items: flex-start;
       gap: 8px;
       font-size: 0.82rem;
 
@@ -54,7 +54,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-top: 2px; /* Perfekte vertikale Ausrichtung am Text */
+        margin-top: 2px;
 
         mat-icon {
           font-size: 16px;
@@ -74,7 +74,7 @@
       .task-details {
         flex: 1;
         display: flex;
-        flex-direction: column; /* Sorgt dafür, dass Sub-Boxen UNTER der Beschreibung liegen */
+        flex-direction: column;
         gap: 4px;
         color: var(--text-main, #f8fafc);
         min-width: 0;
@@ -83,39 +83,66 @@
           word-break: break-word;
         }
 
-        .subagent-delegation-box {
-          margin-top: 4px;
-          font-size: 0.8rem;
-          background: rgba(0, 0, 0, 0.25);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          padding: 6px 10px;
-          border-radius: 6px;
+        /* Sub-Agent Chat-Bubbles Container */
+        .sub-agent-chat {
+          margin-top: 6px;
+          padding: 8px;
+          background: rgba(0, 0, 0, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
 
-          .delegation-header {
+          .mini-bubble {
             display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 500;
+            max-width: 85%;
+            font-size: 0.8rem;
+            line-height: 1.35;
 
-            mat-icon {
-              font-size: 14px;
-              width: 14px;
-              height: 14px;
+            &.outbound {
+              align-self: flex-end;
+
+              .bubble-content {
+                background: var(--bubble-me-bg, #3b82f6);
+                color: #ffffff;
+                border-radius: 10px 10px 2px 10px;
+                padding: 5px 9px;
+                word-break: break-word;
+              }
             }
 
-            code {
-              font-size: 0.75rem;
-              background: rgba(255, 255, 255, 0.1);
-              padding: 1px 5px;
-              border-radius: 3px;
-              font-family: monospace;
-            }
-          }
+            &.inbound {
+              align-self: flex-start;
+              gap: 6px;
+              align-items: flex-end;
 
-          .delegation-msg-preview {
-            margin-top: 4px;
-            font-style: italic;
-            opacity: 0.85;
+              .avatar {
+                width: 24px;
+                height: 24px;
+                min-width: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.65rem;
+                font-weight: 700;
+                color: #ffffff;
+                flex-shrink: 0;
+              }
+
+              .bubble-content {
+                background: rgba(255, 255, 255, 0.08);
+                color: var(--text-main, #f8fafc);
+                border-radius: 10px 10px 10px 2px;
+                padding: 5px 9px;
+                word-break: break-word;
+
+                .bubble-text {
+                  white-space: pre-wrap;
+                }
+              }
+            }
           }
         }
 
