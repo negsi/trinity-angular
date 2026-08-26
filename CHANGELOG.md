@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Changed
+- **UI/Layout (Chat Workspace):** Consolidated layout bounds across chat bubbles and Markdown containers to prevent horizontal overflow.
+  - Applied `min-width: 0` and `max-width: 100%` constraints to message content containers and `markdown` host elements.
+  - Configured `overflow-x: auto`, `white-space: pre`, and standard container padding for HTML `<pre>` elements in code blocks.
+  - Adjusted inline code styling (`:not(pre) > code`) to enforce word wrapping and fluid text reflow.
 
 ## [0.1.4] - 2026-08-24
 
