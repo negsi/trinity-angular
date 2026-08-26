@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+## [0.1.5] - 2026-08-26
+
+### Added
+
 - **Data Models & Streaming (Task Execution Pipeline):** Extended task tracking structures for step result handling.
   - Added optional `result` field to `TaskItem` interface in `task-chain-model.ts` to support tool execution outputs.
   - Extended `SseParsedEvent` (`task_step_update`) in `sse-decoder.util.ts` to capture and stream `result` payloads from SSE events.
@@ -194,7 +200,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.4...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.5...develop
+[0.1.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.5
 [0.1.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.4
 [0.1.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.3
 [0.1.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.2
