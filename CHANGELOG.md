@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.1.6] - 2026-08-26
+
+### Added
+
+- **Smart Auto-Scrolling**: Added threshold-based auto-scroll logic in `ChatWorkspaceComponent`. Scrolling pauses automatically when the user scrolls up during message streaming and resumes when returning to the bottom.
+- **Collapsible Task Chain View**: Enhanced `TaskChainListComponent` with collapsible task execution plans (collapsed by default, expandable via click).
+- **Progress Indicator**: Dynamic progress indicator in the task chain header with live step counter (`Step X of Y` / `X/Y completed`) and a spinner animation during active execution.
+
+### Changed
+
+- **Scroll Event Binding**: Added scroll event tracking to the chat messages container to monitor user scroll position.
+- **Task Chain Header Interaction**: Redesigned the task chain header into an interactive toggle element featuring a chevron icon indicating the expanded/collapsed state.
+
 ## [0.1.5] - 2026-08-26
 
 ### Added
@@ -200,7 +213,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.5...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.6...develop
+[0.1.6]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.6
 [0.1.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.5
 [0.1.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.4
 [0.1.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.3

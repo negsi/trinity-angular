@@ -74,6 +74,9 @@ export class ChatWorkspaceComponent {
   readonly conversationsList = signal<ConversationUI[]>([]);
   readonly activeConversationId = signal<string | null>(null);
 
+  // Smart Auto-Scroll State Signal
+  readonly userHasScrolledUp = signal<boolean>(false);
+
   // Shared Helper Functions for Template
   readonly getInitials = getInitials;
   readonly getAvatarBg = getAvatarColor;
@@ -161,13 +164,28 @@ export class ChatWorkspaceComponent {
       // Signal lesen, um den Effect bei jeder Änderung zu triggern
       const groups = this.messageGroups();
 
-      if (groups.length > 0) {
+      // Nur herunterscrollen, wenn Nachrichten vorhanden sind und der Nutzer NICHT manuell nach oben gescrollt hat
+      if (groups.length > 0 && !this.userHasScrolledUp()) {
         // Warten bis der Browser das DOM nach dem Signal-Update neu gerendert hat
         requestAnimationFrame(() => {
           this.scrollToBottom();
         });
       }
     });
+  }
+
+  /**
+   * Tracks user scroll events inside the messages container.
+   * Disables auto-scrolling if the user scrolls away from the bottom.
+   */
+  onScroll(): void {
+    const el = this.scrollContainer()?.nativeElement;
+    if (!el) return;
+
+    const threshold = 100; // Distance in pixels from the bottom edge
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+
+    this.userHasScrolledUp.set(!isNearBottom);
   }
 
   toggleFullscreen(): void {
@@ -196,12 +214,14 @@ export class ChatWorkspaceComponent {
     const activeAgent = this.agentService.selectedAgent();
     if (!activeAgent) return;
 
+    this.userHasScrolledUp.set(false);
     this.activeConversationId.set(conversationId);
     this.chatService.loadMessages(activeAgent.id, conversationId);
     this.isDrawerOpen.set(false);
   }
 
   onNewConversation(): void {
+    this.userHasScrolledUp.set(false);
     this.activeConversationId.set(null);
     this.chatService.clearMessages();
     this.isDrawerOpen.set(false);
@@ -268,6 +288,7 @@ export class ChatWorkspaceComponent {
       recipient_id: activeAgent.id
     };
 
+    this.userHasScrolledUp.set(false);
     this.currentInput.set('');
     this.selectedFiles.set([]);
     this.isExpanded.set(false);
@@ -310,6 +331,7 @@ export class ChatWorkspaceComponent {
       recipient_id: activeAgent.id
     };
 
+    this.userHasScrolledUp.set(false);
     void this.chatService.sendMessage(payload, activeAgent.name, []);
   }
 

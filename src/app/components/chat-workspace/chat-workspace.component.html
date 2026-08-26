@@ -34,7 +34,7 @@
     </header>
 
     <!-- Scrollable Messages Area -->
-    <div class="messages-container" #scrollContainer>
+    <div class="messages-container" #scrollContainer (scroll)="onScroll()">
       @if (chatService.isLoading()) {
         <div class="state-msg">Lade Nachrichten...</div>
       } @else if (chatService.error()) {
