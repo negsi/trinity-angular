@@ -161,14 +161,21 @@ export class ChatWorkspaceComponent {
 
     // Native Zoneless Auto-Scroll: executes directly after layout rendering completes
     effect(() => {
-      // Signal lesen, um den Effect bei jeder Änderung zu triggern
       const groups = this.messageGroups();
 
-      // Nur herunterscrollen, wenn Nachrichten vorhanden sind und der Nutzer NICHT manuell nach oben gescrollt hat
       if (groups.length > 0 && !this.userHasScrolledUp()) {
-        // Warten bis der Browser das DOM nach dem Signal-Update neu gerendert hat
         requestAnimationFrame(() => {
           this.scrollToBottom();
+        });
+      }
+    });
+
+    // Automatically focus textarea after streaming completes
+    effect(() => {
+      const streaming = this.chatService.isStreaming();
+      if (!streaming) {
+        requestAnimationFrame(() => {
+          this.chatTextarea()?.nativeElement.focus();
         });
       }
     });
@@ -235,6 +242,8 @@ export class ChatWorkspaceComponent {
   }
 
   onFilesSelected(event: Event): void {
+    if (this.chatService.isStreaming()) return;
+
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const newFiles = Array.from(input.files);
@@ -244,6 +253,7 @@ export class ChatWorkspaceComponent {
   }
 
   removeFile(index: number): void {
+    if (this.chatService.isStreaming()) return;
     this.selectedFiles.update((prev) => prev.filter((_, i) => i !== index));
   }
 
@@ -254,7 +264,9 @@ export class ChatWorkspaceComponent {
   onKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      this.sendMessage();
+      if (!this.chatService.isStreaming()) {
+        this.sendMessage();
+      }
     }
   }
 
@@ -272,6 +284,8 @@ export class ChatWorkspaceComponent {
   }
 
   sendMessage(): void {
+    if (this.chatService.isStreaming()) return;
+
     const text = this.currentInput().trim();
     const files = this.selectedFiles();
     const activeAgent = this.agentService.selectedAgent();
@@ -304,6 +318,10 @@ export class ChatWorkspaceComponent {
     });
   }
 
+  stopStreaming(): void {
+    this.chatService.cancelActiveStream();
+  }
+
   copyAsPlainText(markdownText: string): void {
     const plainText = stripMarkdown(markdownText);
     if (plainText) {
@@ -318,6 +336,8 @@ export class ChatWorkspaceComponent {
   }
 
   resendMessage(msgText: string): void {
+    if (this.chatService.isStreaming()) return;
+
     const activeAgent = this.agentService.selectedAgent();
     const user = this.userService.currentUser();
     if (!activeAgent || !msgText) return;

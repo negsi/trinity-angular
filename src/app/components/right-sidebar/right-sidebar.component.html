@@ -1,0 +1,27 @@
+<nav class="slim-sidebar right-sidebar" [class.light-mode]="isLightMode()">
+  <!-- Toggle Collapse Button -->
+  <button 
+    mat-mini-fab 
+    color="primary" 
+    type="button"
+    class="toggle-btn" 
+    (click)="onToggle($event)"
+  >
+    <mat-icon>{{ isCollapsed() ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+  </button>
+
+  <mat-divider class="divider"></mat-divider>
+
+  <!-- Navigation Icons -->
+  <div class="nav-section">
+    <button 
+      mat-icon-button 
+      type="button"
+      class="nav-item active" 
+      matTooltip="Agent Config"
+      (click)="onToggle($event)"
+    >
+      <mat-icon>tune</mat-icon>
+    </button>
+  </div>
+</nav>

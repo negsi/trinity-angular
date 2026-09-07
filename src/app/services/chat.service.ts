@@ -147,7 +147,10 @@ export class ApiChatService {
     }
   }
 
-  private buildRequestBody(dto: SendMessageDto, files: File[]): { body: FormData | string; headers: Record<string, string> } {
+  private buildRequestBody(
+    dto: SendMessageDto,
+    files: File[]
+  ): { body: FormData | string; headers: Record<string, string> } {
     if (files.length > 0) {
       const formData = new FormData();
       formData.append('text', dto.text || '');
