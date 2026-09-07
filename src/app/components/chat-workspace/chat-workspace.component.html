@@ -2,17 +2,17 @@
      [class.light-mode]="isLightMode()"
      [class.is-fullscreen]="isFullscreen()"
 >
-  @if (agentService.selectedAgent(); as activeAgent) {
+  @if (activeAgent(); as agent) {
     <!-- Sticky Header -->
     <header class="chat-header">
       <div class="header-user">
-        <div class="avatar" [style.background-color]="getAvatarBg(activeAgent.name)">
-          {{ getInitials(activeAgent.name) }}
+        <div class="avatar" [style.background-color]="getAvatarBg(agent.name)">
+          {{ getInitials(agent.name) }}
           <span class="status-dot"></span>
         </div>
         <div class="user-meta">
-          <h3>{{ activeAgent.name }}</h3>
-          <span class="status-text">{{ activeAgent.description }}</span>
+          <h3>{{ agent.name }}</h3>
+          <span class="status-text">{{ agent.description }}</span>
         </div>
       </div>
 
@@ -53,7 +53,6 @@
 
               <div class="message-content">
                 <div class="bubble">
-                  <!-- Task Chain Progress Indicator -->
                   @if (msg.taskPhases && msg.taskPhases.length > 0) {
                     <div class="task-phases-container">
                       @for (phase of msg.taskPhases; track phase.phaseIndex) {
@@ -62,8 +61,7 @@
                     </div>
                   }
 
-                  <!-- Text / Typing Dots -->
-                  @if (chatService.isStreaming() && !msg.text && (!msg.taskPhases || msg.taskPhases.length === 0)) {
+                  @if (isCurrentAgentStreaming() && !msg.text && (!msg.taskPhases || msg.taskPhases.length === 0)) {
                     <div class="typing-dots">
                       <span class="dot"></span>
                       <span class="dot"></span>
@@ -91,7 +89,6 @@
                   }
                 </div>
 
-                <!-- Footer Metadata & Action Buttons -->
                 <div class="meta">
                   <div class="meta-info">
                     <span class="time">{{ msg.time }}</span>
@@ -124,7 +121,7 @@
                         mat-icon-button 
                         type="button" 
                         matTooltip="Wiederholen" 
-                        [disabled]="chatService.isStreaming()"
+                        [disabled]="isCurrentAgentStreaming()"
                         (click)="resendMessage(msg.text)"
                       >
                         <mat-icon>refresh</mat-icon>
@@ -168,7 +165,7 @@
               <div class="file-chip">
                 <mat-icon>insert_drive_file</mat-icon>
                 <span class="file-name">{{ file.name }}</span>
-                <button mat-icon-button (click)="removeFile(idx)" type="button" [disabled]="chatService.isStreaming()">
+                <button mat-icon-button (click)="removeFile(idx)" type="button" [disabled]="isCurrentAgentStreaming()">
                   <mat-icon>close</mat-icon>
                 </button>
               </div>
@@ -189,7 +186,7 @@
             mat-icon-button 
             class="action-btn attach-btn" 
             (click)="fileInput.click()" 
-            [disabled]="chatService.isStreaming()"
+            [disabled]="isCurrentAgentStreaming()"
             type="button" 
             matTooltip="Datei anhängen"
           >
@@ -200,8 +197,8 @@
             <textarea 
               #chatTextarea
               rows="1"
-              [placeholder]="chatService.isStreaming() ? 'Antwort wird generiert...' : 'Frag ' + activeAgent.name + '...'" 
-              [disabled]="chatService.isStreaming()"
+              [placeholder]="isCurrentAgentStreaming() ? 'Antwort wird generiert...' : 'Frag ' + agent.name + '...'" 
+              [disabled]="isCurrentAgentStreaming()"
               [ngModel]="currentInput()" 
               (ngModelChange)="currentInput.set($event); adjustTextareaHeight()"
               (keydown)="onKeyDown($event)"
@@ -209,9 +206,9 @@
           </div>
 
           <div class="inline-right-actions">
-            <button mat-icon-button class="action-btn" type="button" [disabled]="chatService.isStreaming()"><mat-icon>mic</mat-icon></button>
+            <button mat-icon-button class="action-btn" type="button" [disabled]="isCurrentAgentStreaming()"><mat-icon>mic</mat-icon></button>
             
-            @if (chatService.isStreaming()) {
+            @if (isCurrentAgentStreaming()) {
               <button 
                 mat-mini-fab 
                 color="warn" 
@@ -242,7 +239,7 @@
               mat-icon-button 
               class="action-btn" 
               (click)="fileInput.click()" 
-              [disabled]="chatService.isStreaming()"
+              [disabled]="isCurrentAgentStreaming()"
               type="button" 
               matTooltip="Datei anhängen"
             >
@@ -251,9 +248,9 @@
           </div>
           
           <div class="right-actions">
-            <button mat-icon-button class="action-btn" type="button" [disabled]="chatService.isStreaming()"><mat-icon>mic</mat-icon></button>
+            <button mat-icon-button class="action-btn" type="button" [disabled]="isCurrentAgentStreaming()"><mat-icon>mic</mat-icon></button>
             
-            @if (chatService.isStreaming()) {
+            @if (isCurrentAgentStreaming()) {
               <button 
                 mat-mini-fab 
                 color="warn" 

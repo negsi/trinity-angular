@@ -1,13 +1,13 @@
 import { Component, signal, HostListener, viewChild, inject, effect } from '@angular/core';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
-import { AgentListComponent } from './components/agent-list/agent-list.component';
+import { AgentListComponent, AgentViewMode } from './components/agent-list/agent-list.component';
 import { ChatWorkspaceComponent } from './components/chat-workspace/chat-workspace.component';
 import { AgentConfigComponent } from './components/agent-config/agent-config.component';
 import { RightSidebarComponent } from './components/right-sidebar/right-sidebar.component';
 import { ApiAgentService } from './services/agent.service';
 
 /**
- * Root Application Component providing the primary 3-column workspace layout.
+ * Root Application Component providing the primary 3-column / multi-agent workspace layout.
  */
 @Component({
   selector: 'app-root',
@@ -25,12 +25,16 @@ import { ApiAgentService } from './services/agent.service';
 export class AppComponent {
   private readonly PANEL_WIDTH_KEY = 'trinity_right_panel_width';
   private readonly PANEL_COLLAPSED_KEY = 'trinity_right_panel_collapsed';
-  private readonly agentService = inject(ApiAgentService);
+  private readonly VIEW_MODE_KEY = 'trinity_agent_view_mode';
 
+  readonly agentService = inject(ApiAgentService);
   readonly agentConfig = viewChild(AgentConfigComponent);
 
   /** Light mode toggle state signal */
   readonly isLightMode = signal<boolean>(false);
+
+  /** Active View Mode ('solo' vs 'crew') */
+  readonly viewMode = signal<AgentViewMode>(this.getInitialViewMode());
 
   /** Right-hand configuration panel collapsed state signal */
   readonly isRightPanelCollapsed = signal<boolean>(this.getInitialCollapsedState());
@@ -60,6 +64,18 @@ export class AppComponent {
       }
     }
     return 500;
+  }
+
+  private getInitialViewMode(): AgentViewMode {
+    const saved = localStorage.getItem(this.VIEW_MODE_KEY);
+    return saved === 'multi' ? 'multi' : 'single';
+  }
+
+  /**
+   * Handles switching between 'solo' and 'crew' mode.
+   */
+  onViewModeChange(mode: AgentViewMode): void {
+    this.viewMode.set(mode);
   }
 
   /**
