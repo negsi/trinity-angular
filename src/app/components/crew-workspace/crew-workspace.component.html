@@ -1,0 +1,22 @@
+<div 
+  class="crew-grid" 
+  [class.grid-1]="crewAgents().length <= 1"
+  [class.grid-2]="crewAgents().length === 2"
+  [class.grid-3]="crewAgents().length === 3"
+  [class.grid-4]="crewAgents().length === 4"
+>
+  @for (agent of crewAgents(); track agent.id) {
+    <div class="crew-pane">
+      <app-chat-workspace 
+        [isLightMode]="isLightMode()"
+        [overrideAgent]="agent"
+      ></app-chat-workspace>
+    </div>
+  } @empty {
+    <div class="empty-crew-state">
+      <mat-icon>group_add</mat-icon>
+      <h3>Keine Crew-Agenten ausgewählt</h3>
+      <p>Wähle links bis zu 4 Agenten aus, um synchrone Workspaces zu starten.</p>
+    </div>
+  }
+</div>

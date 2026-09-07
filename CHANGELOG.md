@@ -8,7 +8,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- **Multi-Agent "Crew" Layout Support:**
+  - `AppComponent` and workspace layout templates now support a responsive grid layout displaying up to 4 agents simultaneously (`grid-count-1` through `grid-count-4`)[cite: 9].
+  - View mode toggle pill in `AgentListComponent` to switch between `Single` (Solo) and `Multi` (Crew) workspace modes, with user preference persisting in `localStorage`[cite: 9].
+  - Visual selection badge (checkmark overlay) for active crew agents and disabled UI state when reaching the 4-agent maximum limit[cite: 9].
+- **Per-Agent State Isolation in `ApiChatService`:**
+  - Isolated state management for chat messages (`messagesMap`) and active SSE streaming controllers (`abortControllersMap`, `streamingMap`) keyed by agent ID[cite: 9].
+  - Added reactive signal helpers `isAgentStreaming(agentId)` and `getMessagesSignal(agentId)` for agent-level status tracking[cite: 9].
+  - Introduced `draftAgentId` tracking to isolate unsaved new conversation drafts per agent[cite: 9].
+- **Agent Override Support in `ChatWorkspaceComponent`:**
+  - Added optional `overrideAgent` input allowing individual chat workspace instances in the Crew grid to bind to specific agent contexts[cite: 9].
+
 ### Changed
+
+- **Isolated Chat Workspace Streaming State:**
+  - `ChatWorkspaceComponent` now computes streaming activity per active agent (`isCurrentAgentStreaming`), ensuring input disabling and stream cancellation (`cancelActiveStream`) operate strictly on the targeted agent[cite: 9].
+- **Layout & UI Refinements:**
+  - Restructured `app.component.scss` to ensure full flexbox stretching in Single mode and clean 2x2 grid partitioning in Crew mode[cite: 9].
+  - Redesigned agent list header layout with a modern pill toggle and adjusted padding styling[cite: 9].
 
 ## [0.1.7] - 2026-09-07
 

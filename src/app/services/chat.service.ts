@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, Signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Message, SendMessageDto, TaskPhase } from '../models/message.model';
@@ -12,16 +12,48 @@ export class ApiChatService {
   private readonly http = inject(HttpClient);
   private readonly agentsUrl = '/api/v1/agents';
 
-  private activeAbortController: AbortController | null = null;
+  /** Map holding active AbortControllers isolated per agent ID */
+  private readonly abortControllersMap = new Map<string, AbortController>();
 
-  readonly messages = signal<Message[]>([]);
+  /** Tracks which agent ID currently has an active "New Conversation" draft */
+  draftAgentId: string | null = null;
+
+  /** Map holding message arrays isolated per agent ID */
+  private readonly messagesMap = signal<Record<string, Message[]>>({});
+
+  /** Map holding active streaming states per agent ID */
+  private readonly streamingMap = signal<Record<string, boolean>>({});
+
   readonly isLoading = signal<boolean>(false);
-  readonly isStreaming = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
-  clearMessages(): void {
-    this.cancelActiveStream();
-    this.messages.set([]);
+  /** Returns a reactive computed Signal for a specific agent's streaming state */
+  isAgentStreaming(agentId: string): Signal<boolean> {
+    return computed(() => !!this.streamingMap()[agentId]);
+  }
+
+  /** Returns a reactive computed Signal for a specific agent's messages */
+  getMessagesSignal(agentId: string): Signal<Message[]> {
+    return computed(() => this.messagesMap()[agentId] ?? []);
+  }
+
+  /** Sets messages for a specific agent */
+  setMessages(agentId: string, messages: Message[]): void {
+    this.messagesMap.update((map) => ({ ...map, [agentId]: messages }));
+  }
+
+  private setAgentStreaming(agentId: string, isStreaming: boolean): void {
+    this.streamingMap.update((map) => ({ ...map, [agentId]: isStreaming }));
+  }
+
+  clearMessages(agentId?: string): void {
+    if (agentId) {
+      this.cancelActiveStream(agentId);
+      this.messagesMap.update((map) => ({ ...map, [agentId]: [] }));
+    } else {
+      this.cancelAllStreams();
+      this.messagesMap.set({});
+    }
     this.error.set(null);
   }
 
@@ -38,7 +70,7 @@ export class ApiChatService {
   loadMessages(agentId: string, conversationId: string, limit = 50): void {
     if (!conversationId || !agentId) return;
 
-    this.cancelActiveStream();
+    this.cancelActiveStream(agentId);
     this.isLoading.set(true);
     this.error.set(null);
 
@@ -48,7 +80,7 @@ export class ApiChatService {
       )
       .subscribe({
         next: (data: Message[]) => {
-          this.messages.set(data);
+          this.setMessages(agentId, data);
           this.isLoading.set(false);
         },
         error: (err: unknown) => {
@@ -59,15 +91,21 @@ export class ApiChatService {
       });
   }
 
-  /**
-   * Bricht einen eventuell noch laufenden SSE-Stream sauber ab.
-   */
-  cancelActiveStream(): void {
-    if (this.activeAbortController) {
-      this.activeAbortController.abort();
-      this.activeAbortController = null;
-      this.isStreaming.set(false);
+  cancelActiveStream(agentId: string): void {
+    const controller = this.abortControllersMap.get(agentId);
+    if (controller) {
+      controller.abort();
+      this.abortControllersMap.delete(agentId);
+      this.setAgentStreaming(agentId, false);
     }
+  }
+
+  cancelAllStreams(): void {
+    this.abortControllersMap.forEach((controller, agentId) => {
+      controller.abort();
+      this.setAgentStreaming(agentId, false);
+    });
+    this.abortControllersMap.clear();
   }
 
   async sendMessage(
@@ -82,8 +120,11 @@ export class ApiChatService {
       return;
     }
 
-    this.cancelActiveStream();
-    this.activeAbortController = new AbortController();
+    // Cancel previous stream ONLY for this specific agent
+    this.cancelActiveStream(agentId);
+
+    const abortController = new AbortController();
+    this.abortControllersMap.set(agentId, abortController);
 
     const tempUserMsg: Message = {
       id: `user-${Date.now()}`,
@@ -117,8 +158,9 @@ export class ApiChatService {
       taskPhases: []
     };
 
-    this.messages.update((prev) => [...prev, tempUserMsg, tempAgentMsg]);
-    this.isStreaming.set(true);
+    const currentAgentMsgs = this.messagesMap()[agentId] ?? [];
+    this.setMessages(agentId, [...currentAgentMsgs, tempUserMsg, tempAgentMsg]);
+    this.setAgentStreaming(agentId, true);
     this.error.set(null);
 
     try {
@@ -128,22 +170,22 @@ export class ApiChatService {
         method: 'POST',
         headers,
         body,
-        signal: this.activeAbortController.signal
+        signal: abortController.signal
       });
 
       if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       if (!response.body) return;
 
-      await this.readEventStream(response.body, tempAgentMsgId, onNewConvCreated);
+      await this.readEventStream(agentId, response.body, tempAgentMsgId, onNewConvCreated);
     } catch (err: unknown) {
       if ((err as Error)?.name === 'AbortError') {
-        return; // Normaler Benutzer-Abbruch
+        return;
       }
       console.error('Streaming error occurred:', err);
       this.error.set('Streaming failed.');
     } finally {
-      this.isStreaming.set(false);
-      this.activeAbortController = null;
+      this.setAgentStreaming(agentId, false);
+      this.abortControllersMap.delete(agentId);
     }
   }
 
@@ -171,6 +213,7 @@ export class ApiChatService {
   }
 
   private async readEventStream(
+    agentId: string,
     stream: ReadableStream<Uint8Array>,
     agentMessageId: string,
     onNewConvCreated?: (newId: string) => void
@@ -188,16 +231,22 @@ export class ApiChatService {
       buffer = events.pop() ?? '';
 
       for (const rawEvent of events) {
-        this.handleRawSseEvent(rawEvent, agentMessageId, onNewConvCreated);
+        this.handleRawSseEvent(agentId, rawEvent, agentMessageId, onNewConvCreated);
       }
     }
 
     if (buffer.trim()) {
-      this.handleRawSseEvent(buffer, agentMessageId, onNewConvCreated);
+      this.handleRawSseEvent(agentId, buffer, agentMessageId, onNewConvCreated);
     }
   }
 
+  private updateAgentMessages(agentId: string, updateFn: (msgs: Message[]) => Message[]): void {
+    const msgs = this.messagesMap()[agentId] ?? [];
+    this.setMessages(agentId, updateFn(msgs));
+  }
+
   private handleRawSseEvent(
+    agentId: string,
     rawEvent: string,
     messageId: string,
     onNewConvCreated?: (newId: string) => void
@@ -209,14 +258,14 @@ export class ApiChatService {
 
     switch (event.type) {
       case 'meta':
-        this.messages.update((prev) =>
+        this.updateAgentMessages(agentId, (prev) =>
           prev.map((m) => (!m.conversation_id ? { ...m, conversation_id: event.conversationId } : m))
         );
         onNewConvCreated?.(event.conversationId);
         break;
 
       case 'attachments':
-        this.messages.update((prev) =>
+        this.updateAgentMessages(agentId, (prev) =>
           prev.map((m) =>
             m.id === messageId
               ? { ...m, attachments: [...(m.attachments || []), ...event.attachments] }
@@ -226,7 +275,7 @@ export class ApiChatService {
         break;
 
       case 'task_chain_init':
-        this.messages.update((prev) =>
+        this.updateAgentMessages(agentId, (prev) =>
           prev.map((m) => {
             if (m.id !== messageId) return m;
             const currentPhases = m.taskPhases || [];
@@ -240,7 +289,7 @@ export class ApiChatService {
         break;
 
       case 'task_step_update':
-        this.messages.update((prev) =>
+        this.updateAgentMessages(agentId, (prev) =>
           prev.map((m) =>
             m.id === messageId
               ? {
@@ -257,7 +306,7 @@ export class ApiChatService {
         break;
 
       case 'text_chunk':
-        this.messages.update((prev) =>
+        this.updateAgentMessages(agentId, (prev) =>
           prev.map((m) => (m.id === messageId ? { ...m, text: m.text + event.text } : m))
         );
         break;

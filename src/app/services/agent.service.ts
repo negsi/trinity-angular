@@ -19,8 +19,11 @@ export class ApiAgentService {
   /** List of all loaded agents */
   readonly agents = signal<Agent[]>([]);
 
-  /** Currently selected agent entity or null */
+  /** Currently selected agent entity or null for Solo mode */
   readonly selectedAgent = signal<Agent | null>(null);
+
+  /** Selected agents array for Crew mode (maximum 4) */
+  readonly selectedCrewAgents = signal<Agent[]>([]);
 
   /** Loading indicator flag */
   readonly isLoading = signal<boolean>(false);
@@ -41,6 +44,9 @@ export class ApiAgentService {
         if (data.length > 0 && !this.selectedAgent()) {
           this.selectedAgent.set(data[0]);
         }
+        if (data.length > 0 && this.selectedCrewAgents().length === 0) {
+          this.selectedCrewAgents.set([data[0]]);
+        }
         this.isLoading.set(false);
       },
       error: (err: unknown) => {
@@ -60,13 +66,31 @@ export class ApiAgentService {
   }
 
   /**
-   * Selects an active agent.
+   * Selects an active single agent (Solo Mode).
    *
    * @param agent - The agent to select.
    */
   selectAgent(agent: Agent): void {
     this.isCreating.set(false);
     this.selectedAgent.set(agent);
+  }
+
+  /**
+   * Toggles selection of an agent in Crew mode (max 4).
+   *
+   * @param agent - The agent to toggle.
+   */
+  toggleCrewAgent(agent: Agent): void {
+    this.selectedCrewAgents.update((current) => {
+      const exists = current.some((a) => a.id === agent.id);
+      if (exists) {
+        return current.filter((a) => a.id !== agent.id);
+      }
+      if (current.length >= 4) {
+        return current;
+      }
+      return [...current, agent];
+    });
   }
 
   /**
@@ -124,6 +148,7 @@ export class ApiAgentService {
         if (this.selectedAgent()?.id === id) {
           this.selectedAgent.set(updatedList.length > 0 ? updatedList[0] : null);
         }
+        this.selectedCrewAgents.update((crew) => crew.filter((a) => a.id !== id));
       },
       error: (err: unknown) => {
         console.error('Failed to delete agent:', err);

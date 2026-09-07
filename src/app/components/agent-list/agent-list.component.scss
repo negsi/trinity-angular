@@ -12,7 +12,7 @@
     width: 60px;
 
     .list-header {
-      padding: 11px 8px;
+      padding: 14px 8px;
       justify-content: center;
 
       .header-title {
@@ -40,44 +40,71 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 11px 24px;
+    padding: 14px 12px;
     border-bottom: 1px solid var(--border-color);
     transition: padding 0.3s ease;
 
     .header-title {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       white-space: nowrap;
 
-      h2 {
-        margin: 0;
-        font-size: 1.1rem;
-        font-weight: 700;
-        letter-spacing: -0.01em;
+      /* Moderner Pill-Switch Toggle */
+      .switch-toggle-pill {
+        display: flex;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 20px;
+        padding: 3px;
+        gap: 2px;
+
+        .toggle-option {
+          border: none;
+          background: transparent;
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: var(--text-secondary);
+          padding: 4px 12px;
+          border-radius: 16px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          user-select: none;
+
+          &:hover:not(.active) {
+            color: var(--text-primary);
+          }
+
+          &.active {
+            background-color: #ffffff;
+            color: #1e293b;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+            font-weight: 700;
+          }
+        }
       }
 
       .active-count {
-        font-size: 0.7rem;
+        font-size: 0.68rem;
         font-weight: 700;
         letter-spacing: 0.05em;
         color: var(--text-secondary);
-        background-color: rgba(255, 255, 255, 0.05);
-        padding: 2px 8px;
+        background-color: rgba(0, 0, 0, 0.04);
+        padding: 3px 8px;
         border-radius: 12px;
       }
     }
 
     .collapse-btn {
-      width: 40px !important;
-      height: 40px !important;
+      width: 34px !important;
+      height: 34px !important;
       border-radius: 8px !important;
       box-shadow: none !important;
 
       mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
     }
   }
@@ -120,6 +147,18 @@
           color: #ffffff;
           font-weight: 600;
         }
+
+        /* Pfeil / Chevron beim Selektieren entfernen */
+        .chevron-icon,
+        mat-icon.arrow,
+        &::after {
+          display: none !important;
+        }
+      }
+
+      &.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       .avatar-badge {
@@ -145,8 +184,28 @@
           width: 10px;
           height: 10px;
           background-color: #10b981;
-          border: 2px solid var(--bg-column);
+          border: 2px solid var(--bg-column, #0f172a);
           border-radius: 50%;
+        }
+
+        .crew-badge-check {
+          position: absolute;
+          bottom: -2px;
+          right: -2px;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background-color: #3b82f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          mat-icon {
+            font-size: 11px;
+            width: 11px;
+            height: 11px;
+            color: #ffffff;
+          }
         }
       }
 
@@ -180,6 +239,45 @@
           line-height: 1.3;
         }
       }
+    }
+  }
+}
+
+.view-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+
+  /* In Dark Mode/Light Mode Variablen einbinden, falls vorhanden */
+  .light-mode & {
+    background-color: #f1f5f9;
+  }
+
+  .toggle-btn {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-secondary, #64748b);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+
+    &:hover {
+      color: var(--text-primary, #0f172a);
+    }
+
+    &.active {
+      background-color: #ffffff;
+      color: #6366f1; /* Primärfarbe / Violett */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+      font-weight: 700;
     }
   }
 }

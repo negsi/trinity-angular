@@ -8,12 +8,40 @@
 
   <!-- Column 2: Agent Directory List -->
   <aside class="column col-subnav">
-    <app-agent-list [isLightMode]="isLightMode()"></app-agent-list>
+    <app-agent-list 
+      [isLightMode]="isLightMode()"
+      (viewModeChange)="onViewModeChange($event)"
+    ></app-agent-list>
   </aside>
 
-  <!-- Column 3: Main Chat Workspace -->
+  <!-- Column 3: Main Chat Workspace (Solo Mode vs. Crew Grid Mode) -->
   <main class="column col-main">
-    <app-chat-workspace [isLightMode]="isLightMode()"></app-chat-workspace>
+    @if (viewMode() === 'single') {
+      <div class="solo-workspace-item">
+        <app-chat-workspace [isLightMode]="isLightMode()"></app-chat-workspace>
+      </div>
+    } @else {
+      <div 
+        class="crew-grid-container" 
+        [class.grid-count-1]="agentService.selectedCrewAgents().length === 1"
+        [class.grid-count-2]="agentService.selectedCrewAgents().length === 2"
+        [class.grid-count-3]="agentService.selectedCrewAgents().length === 3"
+        [class.grid-count-4]="agentService.selectedCrewAgents().length === 4"
+      >
+        @for (crewAgent of agentService.selectedCrewAgents(); track crewAgent.id) {
+          <div class="crew-workspace-item">
+            <app-chat-workspace 
+              [isLightMode]="isLightMode()" 
+              [overrideAgent]="crewAgent"
+            ></app-chat-workspace>
+          </div>
+        } @empty {
+          <div class="crew-empty-state">
+            <p>Keine Agenten für die Crew ausgewählt. Wähle mindestens einen Agenten aus der Liste links aus.</p>
+          </div>
+        }
+      </div>
+    }
   </main>
 
   <!-- Resizer Handle -->

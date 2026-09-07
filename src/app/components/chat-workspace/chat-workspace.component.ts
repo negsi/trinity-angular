@@ -27,6 +27,7 @@ import { SendMessageDto, ChatMessageUI, MessageGroup } from '../../models/messag
 import { ConversationUI } from '../../models/conversation.model';
 import { ConversationDrawerComponent } from '../conversation-drawer/conversation-drawer.component';
 import { TaskChainListComponent } from '../task-chain-list/task-chain-list.component';
+import { Agent } from '../../models/agent.model';
 import { getInitials, getAvatarColor } from '../../utils/avatar.util';
 import { formatDateLabel } from '../../utils/date.util';
 import { stripMarkdown } from '../../utils/text.util';
@@ -54,6 +55,9 @@ export class ChatWorkspaceComponent {
   /** Mode indicator signal */
   readonly isLightMode = input.required<boolean>();
 
+  /** Optional agent override for multi-agent crew layout */
+  readonly overrideAgent = input<Agent | null>(null);
+
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly userService = inject(UserContextService);
@@ -77,6 +81,15 @@ export class ChatWorkspaceComponent {
   // Smart Auto-Scroll State Signal
   readonly userHasScrolledUp = signal<boolean>(false);
 
+  // Active Agent computation (Override vs Global Selection)
+  readonly activeAgent = computed<Agent | null>(() => this.overrideAgent() ?? this.agentService.selectedAgent());
+
+  /** Streaming state computed specifically for this active agent */
+  readonly isCurrentAgentStreaming = computed<boolean>(() => {
+    const agent = this.activeAgent();
+    return agent ? this.chatService.isAgentStreaming(agent.id)() : false;
+  });
+
   // Shared Helper Functions for Template
   readonly getInitials = getInitials;
   readonly getAvatarBg = getAvatarColor;
@@ -90,10 +103,13 @@ export class ChatWorkspaceComponent {
   });
 
   /**
-   * Computed message groups structured with relative date headers.
+   * Computed message groups structured with relative date headers for this specific active agent.
    */
   readonly messageGroups = computed<MessageGroup[]>(() => {
-    const rawMessages = this.chatService.messages();
+    const currentAgent = this.activeAgent();
+    if (!currentAgent) return [];
+
+    const rawMessages = this.chatService.getMessagesSignal(currentAgent.id)();
     if (!rawMessages || rawMessages.length === 0) return [];
 
     const groupsMap = new Map<string, ChatMessageUI[]>();
@@ -129,37 +145,46 @@ export class ChatWorkspaceComponent {
 
   constructor() {
     // Race-condition-free conversation loading when active agent changes
-    toObservable(this.agentService.selectedAgent)
+    toObservable(this.activeAgent)
       .pipe(
-        filter((agent) => !!agent),
+        filter((agent): agent is Agent => !!agent),
         switchMap((agent) => {
-          this.chatService.cancelActiveStream();
-          return this.chatService.getConversations(agent!.id);
+          this.chatService.cancelActiveStream(agent.id);
+          return this.chatService.getConversations(agent.id);
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: (convs: ConversationUI[]) => {
           this.conversationsList.set(convs);
-          const activeAgent = this.agentService.selectedAgent();
+          const currentAgent = this.activeAgent();
 
-          if (convs && convs.length > 0 && activeAgent) {
+          if (currentAgent && this.chatService.draftAgentId === currentAgent.id) {
+            this.activeConversationId.set(null);
+            this.chatService.clearMessages(currentAgent.id);
+            return;
+          }
+
+          if (convs && convs.length > 0 && currentAgent) {
             const latestConv = convs[0];
             this.activeConversationId.set(latestConv.id);
-            this.chatService.loadMessages(activeAgent.id, latestConv.id);
-          } else {
+            this.chatService.loadMessages(currentAgent.id, latestConv.id);
+          } else if (currentAgent) {
             this.activeConversationId.set(null);
-            this.chatService.clearMessages();
+            this.chatService.clearMessages(currentAgent.id);
           }
         },
         error: (err: unknown) => {
           console.error('Error loading conversations:', err);
+          const currentAgent = this.activeAgent();
           this.activeConversationId.set(null);
-          this.chatService.clearMessages();
+          if (currentAgent) {
+            this.chatService.clearMessages(currentAgent.id);
+          }
         }
       });
 
-    // Native Zoneless Auto-Scroll: executes directly after layout rendering completes
+    // Native Zoneless Auto-Scroll
     effect(() => {
       const groups = this.messageGroups();
 
@@ -170,9 +195,9 @@ export class ChatWorkspaceComponent {
       }
     });
 
-    // Automatically focus textarea after streaming completes
+    // Automatically focus textarea after streaming completes for this agent
     effect(() => {
-      const streaming = this.chatService.isStreaming();
+      const streaming = this.isCurrentAgentStreaming();
       if (!streaming) {
         requestAnimationFrame(() => {
           this.chatTextarea()?.nativeElement.focus();
@@ -181,15 +206,11 @@ export class ChatWorkspaceComponent {
     });
   }
 
-  /**
-   * Tracks user scroll events inside the messages container.
-   * Disables auto-scrolling if the user scrolls away from the bottom.
-   */
   onScroll(): void {
     const el = this.scrollContainer()?.nativeElement;
     if (!el) return;
 
-    const threshold = 100; // Distance in pixels from the bottom edge
+    const threshold = 100;
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
 
     this.userHasScrolledUp.set(!isNearBottom);
@@ -208,29 +229,38 @@ export class ChatWorkspaceComponent {
   }
 
   loadConversations(): void {
-    const activeAgent = this.agentService.selectedAgent();
-    if (!activeAgent) return;
+    const currentAgent = this.activeAgent();
+    if (!currentAgent) return;
 
-    this.chatService.getConversations(activeAgent.id).subscribe({
+    this.chatService.getConversations(currentAgent.id).subscribe({
       next: (convs: ConversationUI[]) => this.conversationsList.set(convs),
       error: (err: unknown) => console.error('Failed to load conversations:', err)
     });
   }
 
   onSelectConversation(conversationId: string): void {
-    const activeAgent = this.agentService.selectedAgent();
-    if (!activeAgent) return;
+    const currentAgent = this.activeAgent();
+    if (!currentAgent) return;
+
+    if (this.chatService.draftAgentId === currentAgent.id) {
+      this.chatService.draftAgentId = null;
+    }
 
     this.userHasScrolledUp.set(false);
     this.activeConversationId.set(conversationId);
-    this.chatService.loadMessages(activeAgent.id, conversationId);
+    this.chatService.loadMessages(currentAgent.id, conversationId);
     this.isDrawerOpen.set(false);
   }
 
   onNewConversation(): void {
+    const currentAgent = this.activeAgent();
+    if (currentAgent) {
+      this.chatService.draftAgentId = currentAgent.id;
+      this.chatService.clearMessages(currentAgent.id);
+    }
+
     this.userHasScrolledUp.set(false);
     this.activeConversationId.set(null);
-    this.chatService.clearMessages();
     this.isDrawerOpen.set(false);
 
     afterNextRender(
@@ -242,7 +272,7 @@ export class ChatWorkspaceComponent {
   }
 
   onFilesSelected(event: Event): void {
-    if (this.chatService.isStreaming()) return;
+    if (this.isCurrentAgentStreaming()) return;
 
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
@@ -253,7 +283,7 @@ export class ChatWorkspaceComponent {
   }
 
   removeFile(index: number): void {
-    if (this.chatService.isStreaming()) return;
+    if (this.isCurrentAgentStreaming()) return;
     this.selectedFiles.update((prev) => prev.filter((_, i) => i !== index));
   }
 
@@ -264,7 +294,7 @@ export class ChatWorkspaceComponent {
   onKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      if (!this.chatService.isStreaming()) {
+      if (!this.isCurrentAgentStreaming()) {
         this.sendMessage();
       }
     }
@@ -284,14 +314,14 @@ export class ChatWorkspaceComponent {
   }
 
   sendMessage(): void {
-    if (this.chatService.isStreaming()) return;
+    if (this.isCurrentAgentStreaming()) return;
 
     const text = this.currentInput().trim();
     const files = this.selectedFiles();
-    const activeAgent = this.agentService.selectedAgent();
+    const currentAgent = this.activeAgent();
     const user = this.userService.currentUser();
 
-    if ((!text && files.length === 0) || !activeAgent) return;
+    if ((!text && files.length === 0) || !currentAgent) return;
 
     const payload: SendMessageDto = {
       conversation_id: this.activeConversationId() ?? undefined,
@@ -299,7 +329,7 @@ export class ChatWorkspaceComponent {
       sender_type: 'user',
       sender_name: user.name,
       text: text,
-      recipient_id: activeAgent.id
+      recipient_id: currentAgent.id
     };
 
     this.userHasScrolledUp.set(false);
@@ -312,14 +342,20 @@ export class ChatWorkspaceComponent {
       textareaEl.style.height = 'auto';
     }
 
-    void this.chatService.sendMessage(payload, activeAgent.name, files, (newConvId: string) => {
+    void this.chatService.sendMessage(payload, currentAgent.name, files, (newConvId: string) => {
+      if (this.chatService.draftAgentId === currentAgent.id) {
+        this.chatService.draftAgentId = null;
+      }
       this.activeConversationId.set(newConvId);
       this.loadConversations();
     });
   }
 
   stopStreaming(): void {
-    this.chatService.cancelActiveStream();
+    const currentAgent = this.activeAgent();
+    if (currentAgent) {
+      this.chatService.cancelActiveStream(currentAgent.id);
+    }
   }
 
   copyAsPlainText(markdownText: string): void {
@@ -336,11 +372,11 @@ export class ChatWorkspaceComponent {
   }
 
   resendMessage(msgText: string): void {
-    if (this.chatService.isStreaming()) return;
+    if (this.isCurrentAgentStreaming()) return;
 
-    const activeAgent = this.agentService.selectedAgent();
+    const currentAgent = this.activeAgent();
     const user = this.userService.currentUser();
-    if (!activeAgent || !msgText) return;
+    if (!currentAgent || !msgText) return;
 
     const payload: SendMessageDto = {
       conversation_id: this.activeConversationId() ?? undefined,
@@ -348,24 +384,24 @@ export class ChatWorkspaceComponent {
       sender_type: 'user',
       sender_name: user.name,
       text: msgText,
-      recipient_id: activeAgent.id
+      recipient_id: currentAgent.id
     };
 
     this.userHasScrolledUp.set(false);
-    void this.chatService.sendMessage(payload, activeAgent.name, []);
+    void this.chatService.sendMessage(payload, currentAgent.name, []);
   }
 
   onDeleteConversation(conversationId: string): void {
-    const activeAgent = this.agentService.selectedAgent();
-    if (!activeAgent) return;
+    const currentAgent = this.activeAgent();
+    if (!currentAgent) return;
 
-    this.chatService.deleteConversation(activeAgent.id, conversationId).subscribe({
+    this.chatService.deleteConversation(currentAgent.id, conversationId).subscribe({
       next: () => {
         this.conversationsList.update((list) => list.filter((c) => c.id !== conversationId));
 
         if (this.activeConversationId() === conversationId) {
           this.activeConversationId.set(null);
-          this.chatService.clearMessages();
+          this.chatService.clearMessages(currentAgent.id);
         }
       },
       error: (err: unknown) => console.error('Error deleting conversation:', err)

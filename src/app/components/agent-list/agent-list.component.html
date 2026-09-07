@@ -1,8 +1,27 @@
 <div class="agent-list-container" [class.light-mode]="isLightMode()" [class.collapsed]="isCollapsed()">
   <div class="list-header">
     <div class="header-title">
-      <h2>Direct</h2>
-      <span class="active-count">{{ agentService.agents().length }} ACTIVE</span>
+      <div class="switch-toggle-pill">
+        <div class="view-mode-toggle">
+          <button 
+            type="button" 
+            class="toggle-btn" 
+            [class.active]="viewMode() === 'single'" 
+            (click)="setViewMode('single')"
+          >
+            Single
+          </button>
+          <button 
+            type="button" 
+            class="toggle-btn" 
+            [class.active]="viewMode() === 'multi'" 
+            (click)="setViewMode('multi')"
+          >
+            Multi
+          </button>
+        </div>
+      </div>
+
     </div>
     
     <button 
@@ -29,8 +48,9 @@
       @for (agent of agentService.agents(); track agent.id) {
         <div 
           class="agent-item" 
-          [class.selected]="agentService.selectedAgent()?.id === agent.id"
-          (click)="selectAgent(agent)"
+          [class.selected]="viewMode() === 'single' ? agentService.selectedAgent()?.id === agent.id : isCrewSelected(agent.id)"
+          [class.disabled]="viewMode() === 'multi' && !isCrewSelected(agent.id) && agentService.selectedCrewAgents().length >= 4"
+          (click)="onAgentClick(agent)"
           [title]="isCollapsed() ? agent.name : ''"
         >
           <div 
@@ -38,7 +58,13 @@
             [style.background-color]="getAvatarBg(agent.name)"
           >
             {{ getInitials(agent.name) }}
-            <span class="status-indicator"></span>
+            @if (viewMode() === 'multi' && isCrewSelected(agent.id)) {
+              <span class="crew-badge-check">
+                <mat-icon>check</mat-icon>
+              </span>
+            } @else {
+              <span class="status-indicator"></span>
+            }
           </div>
 
           <div class="agent-details">
