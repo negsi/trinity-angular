@@ -112,6 +112,11 @@
             height: 100%;
             width: 100%;
             flex: 1;
+            box-shadow: none !important;
+
+            ::ng-deep * {
+              box-shadow: none !important;
+            }
           }
         }
 
