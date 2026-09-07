@@ -17,10 +17,22 @@
   </main>
 
   <!-- Resizer Handle -->
-  <div class="resizer-handle" (mousedown)="startResizing($event)"></div>
+  @if (!isRightPanelCollapsed()) {
+    <div class="resizer-handle" (mousedown)="startResizing($event)"></div>
+  }
 
   <!-- Column 4: Agent Configuration Panel -->
-  <aside class="column col-details" [style.width.px]="rightPanelWidth()">
+  <aside 
+    class="column col-details" 
+    [class.collapsed]="isRightPanelCollapsed()"
+    [style.width.px]="isRightPanelCollapsed() ? 0 : rightPanelWidth()">
     <app-agent-config [isLightMode]="isLightMode()"></app-agent-config>
   </aside>
+
+  <!-- Column 5: Right Navigation Sidebar Strip -->
+  <app-right-sidebar
+    [isLightMode]="isLightMode()"
+    [isCollapsed]="isRightPanelCollapsed()"
+    (toggleCollapse)="toggleRightPanel()"
+  ></app-right-sidebar>
 </div>

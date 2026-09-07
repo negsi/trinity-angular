@@ -86,3 +86,19 @@
     display: none !important;
   }
 }
+
+.col-details {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-sizing: border-box;
+
+  &.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    flex-shrink: 1 !important;
+    padding: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+  }
+}

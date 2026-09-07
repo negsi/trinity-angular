@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Added `RightSidebarComponent` as a right-hand 64px navigation strip matching the left main sidebar layout to toggle the agent configuration panel.
+- Added `isRightPanelCollapsed` signal state to persist and restore the panel's collapsed state in `localStorage` (`trinity_right_panel_collapsed`) via an Angular `effect()`.
+
 ### Changed
+
+- Updated `AppComponent` layout to support the 5-column structure incorporating the new right navigation sidebar.
+- Fixed resizer width calculations during dragging by subtracting the 64px offset of the right sidebar.
+- Conditionally rendered the resizer handle (`@if (!isRightPanelCollapsed())`) and applied `.collapsed` styles to hide/show the agent configuration panel dynamically.
 
 ## [0.1.6] - 2026-08-26
 

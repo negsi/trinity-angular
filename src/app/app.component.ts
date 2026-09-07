@@ -1,8 +1,9 @@
-import { Component, signal, HostListener, viewChild, inject } from '@angular/core';
+import { Component, signal, HostListener, viewChild, inject, effect } from '@angular/core';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { AgentListComponent } from './components/agent-list/agent-list.component';
 import { ChatWorkspaceComponent } from './components/chat-workspace/chat-workspace.component';
 import { AgentConfigComponent } from './components/agent-config/agent-config.component';
+import { RightSidebarComponent } from './components/right-sidebar/right-sidebar.component';
 import { ApiAgentService } from './services/agent.service';
 
 /**
@@ -15,13 +16,15 @@ import { ApiAgentService } from './services/agent.service';
     SidebarComponent,
     AgentListComponent,
     ChatWorkspaceComponent,
-    AgentConfigComponent
+    AgentConfigComponent,
+    RightSidebarComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
   private readonly PANEL_WIDTH_KEY = 'trinity_right_panel_width';
+  private readonly PANEL_COLLAPSED_KEY = 'trinity_right_panel_collapsed';
   private readonly agentService = inject(ApiAgentService);
 
   readonly agentConfig = viewChild(AgentConfigComponent);
@@ -29,10 +32,24 @@ export class AppComponent {
   /** Light mode toggle state signal */
   readonly isLightMode = signal<boolean>(false);
 
+  /** Right-hand configuration panel collapsed state signal */
+  readonly isRightPanelCollapsed = signal<boolean>(this.getInitialCollapsedState());
+
   /** Right-hand configuration panel width in pixels */
   readonly rightPanelWidth = signal<number>(this.getInitialPanelWidth());
 
   private isResizing = false;
+
+  constructor() {
+    // Reagiert automatisch auf jede Änderung von isRightPanelCollapsed
+    effect(() => {
+      localStorage.setItem(this.PANEL_COLLAPSED_KEY, String(this.isRightPanelCollapsed()));
+    });
+  }
+
+  private getInitialCollapsedState(): boolean {
+    return localStorage.getItem(this.PANEL_COLLAPSED_KEY) === 'true';
+  }
 
   private getInitialPanelWidth(): number {
     const savedWidth = localStorage.getItem(this.PANEL_WIDTH_KEY);
@@ -43,6 +60,13 @@ export class AppComponent {
       }
     }
     return 500;
+  }
+
+  /**
+   * Toggles the collapsed state of the right-hand panel.
+   */
+  toggleRightPanel(): void {
+    this.isRightPanelCollapsed.update((collapsed) => !collapsed);
   }
 
   /**
@@ -60,7 +84,9 @@ export class AppComponent {
   onMouseMove(event: MouseEvent): void {
     if (!this.isResizing) return;
 
-    const newWidth = window.innerWidth - event.clientX;
+    const RIGHT_SIDEBAR_WIDTH = 64;
+    const newWidth = window.innerWidth - event.clientX - RIGHT_SIDEBAR_WIDTH;
+
     if (newWidth >= 350 && newWidth <= 800) {
       this.rightPanelWidth.set(newWidth);
     }
