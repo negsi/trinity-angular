@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+## [0.1.7] - 2026-09-07
+
+### Added
+
 - Added `RightSidebarComponent` as a right-hand 64px navigation strip matching the left main sidebar layout to toggle the agent configuration panel.
 - Added `isRightPanelCollapsed` signal state to persist and restore the panel's collapsed state in `localStorage` (`trinity_right_panel_collapsed`) via an Angular `effect()`.
 - Added dynamic stop button controls in `ChatWorkspaceComponent` to cancel active SSE streaming requests (`chatService.cancelActiveStream()`).
@@ -223,7 +229,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.6...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.7...develop
+[0.1.7]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.7
 [0.1.6]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.6
 [0.1.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.5
 [0.1.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.4
