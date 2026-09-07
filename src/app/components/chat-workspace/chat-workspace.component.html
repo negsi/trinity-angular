@@ -124,6 +124,7 @@
                         mat-icon-button 
                         type="button" 
                         matTooltip="Wiederholen" 
+                        [disabled]="chatService.isStreaming()"
                         (click)="resendMessage(msg.text)"
                       >
                         <mat-icon>refresh</mat-icon>
@@ -167,7 +168,7 @@
               <div class="file-chip">
                 <mat-icon>insert_drive_file</mat-icon>
                 <span class="file-name">{{ file.name }}</span>
-                <button mat-icon-button (click)="removeFile(idx)" type="button">
+                <button mat-icon-button (click)="removeFile(idx)" type="button" [disabled]="chatService.isStreaming()">
                   <mat-icon>close</mat-icon>
                 </button>
               </div>
@@ -184,7 +185,14 @@
         />
 
         <div class="input-row-container">
-          <button mat-icon-button class="action-btn attach-btn" (click)="fileInput.click()" type="button" matTooltip="Datei anhängen">
+          <button 
+            mat-icon-button 
+            class="action-btn attach-btn" 
+            (click)="fileInput.click()" 
+            [disabled]="chatService.isStreaming()"
+            type="button" 
+            matTooltip="Datei anhängen"
+          >
             <mat-icon>add</mat-icon>
           </button>
 
@@ -192,7 +200,8 @@
             <textarea 
               #chatTextarea
               rows="1"
-              [placeholder]="'Frag ' + activeAgent.name + '...'" 
+              [placeholder]="chatService.isStreaming() ? 'Antwort wird generiert...' : 'Frag ' + activeAgent.name + '...'" 
+              [disabled]="chatService.isStreaming()"
               [ngModel]="currentInput()" 
               (ngModelChange)="currentInput.set($event); adjustTextareaHeight()"
               (keydown)="onKeyDown($event)"
@@ -200,8 +209,20 @@
           </div>
 
           <div class="inline-right-actions">
-            <button mat-icon-button class="action-btn" type="button"><mat-icon>mic</mat-icon></button>
-            @if (currentInput().trim() || selectedFiles().length > 0) {
+            <button mat-icon-button class="action-btn" type="button" [disabled]="chatService.isStreaming()"><mat-icon>mic</mat-icon></button>
+            
+            @if (chatService.isStreaming()) {
+              <button 
+                mat-mini-fab 
+                color="warn" 
+                class="send-btn stop-btn" 
+                (click)="stopStreaming()" 
+                type="button"
+                matTooltip="Generierung abbrechen"
+              >
+                <mat-icon>stop</mat-icon>
+              </button>
+            } @else if (currentInput().trim() || selectedFiles().length > 0) {
               <button 
                 mat-mini-fab 
                 color="primary" 
@@ -221,6 +242,7 @@
               mat-icon-button 
               class="action-btn" 
               (click)="fileInput.click()" 
+              [disabled]="chatService.isStreaming()"
               type="button" 
               matTooltip="Datei anhängen"
             >
@@ -229,17 +251,31 @@
           </div>
           
           <div class="right-actions">
-            <button mat-icon-button class="action-btn" type="button"><mat-icon>mic</mat-icon></button>
-            <button 
-              mat-mini-fab 
-              color="primary" 
-              class="send-btn" 
-              (click)="sendMessage()" 
-              [disabled]="!currentInput().trim() && selectedFiles().length === 0"
-              type="button"
-            >
-              <mat-icon>arrow_upward</mat-icon>
-            </button>
+            <button mat-icon-button class="action-btn" type="button" [disabled]="chatService.isStreaming()"><mat-icon>mic</mat-icon></button>
+            
+            @if (chatService.isStreaming()) {
+              <button 
+                mat-mini-fab 
+                color="warn" 
+                class="send-btn stop-btn" 
+                (click)="stopStreaming()" 
+                type="button"
+                matTooltip="Generierung abbrechen"
+              >
+                <mat-icon>stop</mat-icon>
+              </button>
+            } @else {
+              <button 
+                mat-mini-fab 
+                color="primary" 
+                class="send-btn" 
+                (click)="sendMessage()" 
+                [disabled]="!currentInput().trim() && selectedFiles().length === 0"
+                type="button"
+              >
+                <mat-icon>arrow_upward</mat-icon>
+              </button>
+            }
           </div>
         </div>
 
