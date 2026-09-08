@@ -1,5 +1,5 @@
 <nav class="slim-sidebar right-sidebar" [class.light-mode]="isLightMode()">
-  <!-- Toggle Collapse Button -->
+  <!-- Toggle Collapse Button (Ganz oben) -->
   <button 
     mat-mini-fab 
     color="primary" 
@@ -12,16 +12,19 @@
 
   <mat-divider class="divider"></mat-divider>
 
-  <!-- Navigation Icons -->
+  <!-- Navigation Icons VERTIKAL untereinander -->
   <div class="nav-section">
-    <button 
-      mat-icon-button 
-      type="button"
-      class="nav-item active" 
-      matTooltip="Agent Config"
-      (click)="onToggle($event)"
-    >
-      <mat-icon>tune</mat-icon>
-    </button>
+    @for (item of navItems; track item.id) {
+      <button 
+        mat-icon-button 
+        type="button"
+        class="nav-item" 
+        [class.active]="activeTab() === item.id && !isCollapsed()"
+        [matTooltip]="item.label"
+        (click)="selectTab(item.id, $event)"
+      >
+        <mat-icon>{{ item.icon }}</mat-icon>
+      </button>
+    }
   </div>
 </nav>

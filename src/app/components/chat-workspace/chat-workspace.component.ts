@@ -147,6 +147,12 @@ export class ChatWorkspaceComponent {
   });
 
   constructor() {
+    // Keep agentService activeConversationId synced with component state
+    effect(() => {
+      const convId = this.activeConversationId();
+      this.agentService.setActiveConversation(convId);
+    });
+
     // Race-condition-free conversation loading when active agent changes
     toObservable(this.activeAgent)
       .pipe(

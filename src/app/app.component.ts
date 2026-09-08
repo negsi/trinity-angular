@@ -3,6 +3,7 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { AgentListComponent, AgentViewMode } from './components/agent-list/agent-list.component';
 import { ChatWorkspaceComponent } from './components/chat-workspace/chat-workspace.component';
 import { AgentConfigComponent } from './components/agent-config/agent-config.component';
+import { FileWorkspaceComponent } from './components/file-workspace/file-workspace.component';
 import { RightSidebarComponent } from './components/right-sidebar/right-sidebar.component';
 import { ApiAgentService } from './services/agent.service';
 
@@ -17,6 +18,7 @@ import { ApiAgentService } from './services/agent.service';
     AgentListComponent,
     ChatWorkspaceComponent,
     AgentConfigComponent,
+    FileWorkspaceComponent,
     RightSidebarComponent
   ],
   templateUrl: './app.component.html',
@@ -26,6 +28,7 @@ export class AppComponent {
   private readonly PANEL_WIDTH_KEY = 'trinity_right_panel_width';
   private readonly PANEL_COLLAPSED_KEY = 'trinity_right_panel_collapsed';
   private readonly VIEW_MODE_KEY = 'trinity_agent_view_mode';
+  private readonly RIGHT_TAB_KEY = 'trinity_active_right_tab';
 
   readonly agentService = inject(ApiAgentService);
   readonly agentConfig = viewChild(AgentConfigComponent);
@@ -42,12 +45,18 @@ export class AppComponent {
   /** Right-hand configuration panel width in pixels */
   readonly rightPanelWidth = signal<number>(this.getInitialPanelWidth());
 
+  /** Active Right Tab State ('config' | 'files') */
+  readonly activeRightTab = signal<string>(this.getInitialActiveTab());
+
   private isResizing = false;
 
   constructor() {
-    // Reagiert automatisch auf jede Änderung von isRightPanelCollapsed
     effect(() => {
       localStorage.setItem(this.PANEL_COLLAPSED_KEY, String(this.isRightPanelCollapsed()));
+    });
+
+    effect(() => {
+      localStorage.setItem(this.RIGHT_TAB_KEY, this.activeRightTab());
     });
   }
 
@@ -69,6 +78,11 @@ export class AppComponent {
   private getInitialViewMode(): AgentViewMode {
     const saved = localStorage.getItem(this.VIEW_MODE_KEY);
     return saved === 'multi' ? 'multi' : 'single';
+  }
+
+  private getInitialActiveTab(): string {
+    const saved = localStorage.getItem(this.RIGHT_TAB_KEY);
+    return saved || 'config';
   }
 
   /**

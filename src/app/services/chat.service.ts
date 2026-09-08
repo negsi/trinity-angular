@@ -5,6 +5,20 @@ import { Message, SendMessageDto, TaskPhase } from '../models/message.model';
 import { ConversationUI } from '../models/conversation.model';
 import { SseDecoder } from '../utils/sse-decoder.util';
 
+export interface ConversationFile {
+  id: string;
+  name: string;
+  filename: string;
+  file_path: string;
+  mime_type: string;
+  file_size: number;
+  is_dir?: boolean;
+  message_id?: string;
+  created_at?: string;
+  sender_type?: string;
+  sender_name?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -59,6 +73,12 @@ export class ApiChatService {
 
   getConversations(agentId: string): Observable<ConversationUI[]> {
     return this.http.get<ConversationUI[]>(`${this.agentsUrl}/${agentId}/conversations`);
+  }
+
+  getConversationFiles(agentId: string, conversationId: string): Observable<ConversationFile[]> {
+    return this.http.get<ConversationFile[]>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}/files`
+    );
   }
 
   deleteConversation(agentId: string, conversationId: string): Observable<void> {
@@ -120,7 +140,6 @@ export class ApiChatService {
       return;
     }
 
-    // Cancel previous stream ONLY for this specific agent
     this.cancelActiveStream(agentId);
 
     const abortController = new AbortController();
@@ -314,5 +333,54 @@ export class ApiChatService {
       case 'done':
         break;
     }
+  }
+
+  createConversationFolder(
+    agentId: string,
+    conversationId: string,
+    folderPath: string
+  ): Observable<ConversationFile> {
+    return this.http.post<ConversationFile>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}/folders`,
+      { path: folderPath }
+    );
+  }
+
+  deleteConversationFolder(
+    agentId: string,
+    conversationId: string,
+    folderPath: string
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}/folders`,
+      { body: { path: folderPath } }
+    );
+  }
+
+  deleteConversationFile(
+    agentId: string,
+    conversationId: string,
+    filePath: string
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}/files`,
+      { body: { path: filePath } }
+    );
+  }
+
+  uploadConversationFiles(
+    agentId: string,
+    conversationId: string,
+    files: File[],
+    folderPath: string = ''
+  ): Observable<{ uploaded: string[] }> {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    formData.append('folder_path', folderPath);
+
+    return this.http.post<{ uploaded: string[] }>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}/files/upload`,
+      formData
+    );
   }
 }

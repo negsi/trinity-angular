@@ -49,18 +49,31 @@
     <div class="resizer-handle" (mousedown)="startResizing($event)"></div>
   }
 
-  <!-- Column 4: Agent Configuration Panel -->
+  <!-- Column 4: Dynamic Right Panel -->
   <aside 
     class="column col-details" 
     [class.collapsed]="isRightPanelCollapsed()"
     [style.width.px]="isRightPanelCollapsed() ? 0 : rightPanelWidth()">
-    <app-agent-config [isLightMode]="isLightMode()"></app-agent-config>
+    
+    @switch (activeRightTab()) {
+      @case ('config') {
+        <app-agent-config [isLightMode]="isLightMode()"></app-agent-config>
+      }
+      @case ('workspace') {
+        <app-file-workspace [isLightMode]="isLightMode()"></app-file-workspace>
+      }
+      @default {
+        <!-- Fallback -->
+      }
+    }
   </aside>
 
   <!-- Column 5: Right Navigation Sidebar Strip -->
   <app-right-sidebar
     [isLightMode]="isLightMode()"
     [isCollapsed]="isRightPanelCollapsed()"
+    [activeTab]="activeRightTab()"
     (toggleCollapse)="toggleRightPanel()"
+    (activeTabChange)="activeRightTab.set($event)"
   ></app-right-sidebar>
 </div>
