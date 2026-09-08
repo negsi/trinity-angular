@@ -9,7 +9,8 @@ import {
   ElementRef,
   afterNextRender,
   Injector,
-  DestroyRef
+  DestroyRef,
+  ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -93,6 +94,8 @@ export class ChatWorkspaceComponent {
   // Shared Helper Functions for Template
   readonly getInitials = getInitials;
   readonly getAvatarBg = getAvatarColor;
+
+  @ViewChild('chatTextarea') chatTextareaRef?: ElementRef<HTMLTextAreaElement>;
 
   /**
    * Computed flag checking whether current input text exceeds single line.
@@ -202,6 +205,13 @@ export class ChatWorkspaceComponent {
         requestAnimationFrame(() => {
           this.chatTextarea()?.nativeElement.focus();
         });
+      }
+    });
+
+    effect(() => {
+      const agent = this.agentService.selectedAgent();
+      if (agent) {
+        setTimeout(() => this.focusInput(), 50);
       }
     });
   }
@@ -412,6 +422,12 @@ export class ChatWorkspaceComponent {
     const el = this.scrollContainer()?.nativeElement;
     if (el) {
       el.scrollTop = el.scrollHeight;
+    }
+  }
+
+  focusInput(): void {
+    if (this.chatTextareaRef?.nativeElement && !this.isCurrentAgentStreaming()) {
+      this.chatTextareaRef.nativeElement.focus();
     }
   }
 }
