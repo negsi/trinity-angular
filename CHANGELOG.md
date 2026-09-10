@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+## [0.1.9] - 2026-09-10
+
+### Added
 - Dynamic right-side panel layout allowing seamless switching between Agent Configuration and File Workspace views.
 - `FileWorkspaceComponent` integration into the main app component layout.
 - Vertical navigation bar items in `RightSidebarComponent` with dynamic tab switching and tooltips.
@@ -262,7 +268,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.8...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.9...develop
+[0.1.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.9
 [0.1.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.8
 [0.1.7]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.7
 [0.1.6]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.6
