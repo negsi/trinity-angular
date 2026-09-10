@@ -15,8 +15,8 @@ export interface CurrentUser {
 export class UserContextService {
   /** Reactive state holding current authenticated user info */
   readonly currentUser = signal<CurrentUser>({
-    id: 'user-christian',
-    name: 'Christian'
+    id: 'user',
+    name: 'User'
   });
 
   /**
