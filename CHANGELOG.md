@@ -10,13 +10,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Dynamic right-side panel layout allowing seamless switching between Agent Configuration and File Workspace views.
 - `FileWorkspaceComponent` integration into the main app component layout.
 - Vertical navigation bar items in `RightSidebarComponent` with dynamic tab switching and tooltips.
-- Workspace file management API endpoints in `ApiChatService` for listing, uploading, creating folders, and deleting conversation files/directories.
+- Workspace file management API endpoints in `ApiChatService` for listing, uploading, creating folders, downloading, and deleting conversation files/directories.
+- Direct file download functionality (`getFileDownloadUrl`) in `ApiChatService` and `downloadFile` handler in `FileWorkspaceComponent`.
 - Conversation state synchronization in `ApiAgentService` to fetch and maintain agent-specific conversations and track the active conversation ID.
 
 ### Changed
 - Refactored `RightSidebarComponent` to render navigation items dynamically and manage tab selection state.
 - Updated `AppComponent` layout to support persistent active tab state stored in `localStorage`.
 - Streamlined `ApiAgentService` selection workflows to clear or update conversation states automatically upon agent switching or deletion.
+- Replaced generic file format icons in `FileWorkspaceComponent` with a direct download action icon.
 
 ## [0.1.8] - 2026-09-07
 

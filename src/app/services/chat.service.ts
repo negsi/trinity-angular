@@ -383,4 +383,8 @@ export class ApiChatService {
       formData
     );
   }
+
+  getFileDownloadUrl(conversationId: string, filePath: string): string {
+    return `/api/v1/chat/conversations/${conversationId}/files/${encodeURIComponent(filePath)}`;
+  }
 }

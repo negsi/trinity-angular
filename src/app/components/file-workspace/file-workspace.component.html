@@ -147,8 +147,12 @@
               </mat-icon>
             } @else {
               <span class="chevron-spacer"></span>
-              <mat-icon class="node-icon file-icon">
-                {{ getFileIcon(node.file?.mime_type, node.name) }}
+              <mat-icon 
+                class="node-icon file-icon download-icon" 
+                (click)="downloadFile(node, $event)"
+                title="Datei herunterladen"
+              >
+                download
               </mat-icon>
             }
 

@@ -435,4 +435,13 @@ export class FileWorkspaceComponent {
         }
       });
   }
+
+  downloadFile(node: FileTreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const convId = this.agentService.activeConversationId();
+    if (!convId || !node.file) return;
+
+    const url = this.chatService.getFileDownloadUrl(convId, node.path);
+    window.open(url, '_blank');
+  }
 }
