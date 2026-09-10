@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+## [0.2.1] - 2026-09-10
+
+### Added
+
 - **Conversation Drawer / Inline Rename**:
   - `ConversationDrawerComponent`:
     - Added `renameConversation` event output to emit title updates to parent components.
@@ -298,7 +304,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.0...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.1...develop
+[0.2.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.1
 [0.2.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.0
 [0.1.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.9
 [0.1.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.8
