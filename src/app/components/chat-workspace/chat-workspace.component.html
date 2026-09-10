@@ -25,6 +25,14 @@
         </button>
         <button 
           mat-icon-button 
+          matTooltip="Konversation zurücksetzen" 
+          [disabled]="isCurrentAgentStreaming() || !activeConversationId()"
+          (click)="onResetConversation()"
+        >
+          <mat-icon>restart_alt</mat-icon>
+        </button>
+        <button 
+          mat-icon-button 
           [matTooltip]="isFullscreen() ? 'Vollbild beenden' : 'Vollbildmodus'" 
           (click)="toggleFullscreen()"
         >
@@ -127,6 +135,16 @@
                         <mat-icon>refresh</mat-icon>
                       </button>
                     }
+
+                    <button 
+                      mat-icon-button 
+                      type="button" 
+                      matTooltip="Nachricht löschen" 
+                      [disabled]="isCurrentAgentStreaming()"
+                      (click)="onDeleteMessage(msg.id)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
                   </div>
                 </div>
               </div>

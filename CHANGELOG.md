@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.2.0] - 2026-09-10
+
+### Added
+
+- `deleteMessage` HTTP request method in `ApiChatService` to handle message deletion endpoints.
+- `clearConversationMessages` HTTP request method in `ApiChatService` to reset conversation messages via API.
+- `onDeleteMessage` handler in `ChatWorkspaceComponent` to delete messages and update the local reactive signal state.
+- `onResetConversation` handler in `ChatWorkspaceComponent` to clear active conversation history.
+- Delete action button in `ChatWorkspaceComponent` message action toolbar.
+- Reset conversation button in `ChatWorkspaceComponent` header toolbar.
+
 ## [0.1.9] - 2026-09-10
 
 ### Added
@@ -268,7 +279,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.1.9...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.0...develop
+[0.2.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.0
 [0.1.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.9
 [0.1.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.8
 [0.1.7]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.7

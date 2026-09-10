@@ -436,4 +436,34 @@ export class ChatWorkspaceComponent {
       this.chatTextareaRef.nativeElement.focus();
     }
   }
+
+  onDeleteMessage(messageId: string): void {
+    const currentAgent = this.activeAgent();
+    const convId = this.activeConversationId();
+    if (!currentAgent || !convId || !messageId) return;
+
+    this.chatService.deleteMessage(currentAgent.id, convId, messageId).subscribe({
+      next: () => {
+        const currentMsgs = this.chatService.getMessagesSignal(currentAgent.id)();
+        this.chatService.setMessages(
+          currentAgent.id,
+          currentMsgs.filter((m) => m.id !== messageId)
+        );
+      },
+      error: (err: unknown) => console.error('Failed to delete message:', err)
+    });
+  }
+
+  onResetConversation(): void {
+    const currentAgent = this.activeAgent();
+    const convId = this.activeConversationId();
+    if (!currentAgent || !convId) return;
+
+    this.chatService.clearConversationMessages(currentAgent.id, convId).subscribe({
+      next: () => {
+        this.chatService.clearMessages(currentAgent.id);
+      },
+      error: (err: unknown) => console.error('Failed to reset conversation:', err)
+    });
+  }
 }
