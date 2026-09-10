@@ -453,4 +453,17 @@ export class ChatWorkspaceComponent {
       error: (err: unknown) => console.error('Failed to delete message:', err)
     });
   }
+
+  onResetConversation(): void {
+    const currentAgent = this.activeAgent();
+    const convId = this.activeConversationId();
+    if (!currentAgent || !convId) return;
+
+    this.chatService.clearConversationMessages(currentAgent.id, convId).subscribe({
+      next: () => {
+        this.chatService.clearMessages(currentAgent.id);
+      },
+      error: (err: unknown) => console.error('Failed to reset conversation:', err)
+    });
+  }
 }

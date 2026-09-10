@@ -393,4 +393,10 @@ export class ApiChatService {
       `${this.agentsUrl}/${agentId}/conversations/${conversationId}/messages/${messageId}`
     );
   }
+
+  clearConversationMessages(agentId: string, conversationId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}/messages`
+    );
+  }
 }
