@@ -1,0 +1,328 @@
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.file-workspace-container {
+  --bg-color: #0b1120;
+  --text-primary: #f8fafc;
+  --text-muted: #64748b;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --hover-bg: rgba(255, 255, 255, 0.08);
+  --selected-bg: rgba(255, 255, 255, 0.12);
+  --selected-border: rgba(255, 255, 255, 0.22);
+  --folder-icon-color: #60a5fa;
+  --file-icon-color: #94a3b8;
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-border: #60a5fa;
+
+  &.light-mode {
+    --bg-color: #ffffff;
+    --text-primary: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #f1f5f9;
+    --hover-bg: #e2e8f0;
+    --selected-bg: #cbd5e1;
+    --selected-border: #94a3b8;
+    --folder-icon-color: #2563eb;
+    --file-icon-color: #64748b;
+    --input-bg: #f8fafc;
+    --input-border: #2563eb;
+  }
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  box-sizing: border-box;
+
+  .file-workspace-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 19px 24px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+
+    .header-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+
+      h2 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .active-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 0.05em;
+      }
+    }
+
+    .refresh-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 6px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      &:hover:not(:disabled) {
+        background-color: var(--hover-bg);
+        color: var(--text-primary);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      &.spinning mat-icon {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+
+  .workspace-description {
+    margin: 0;
+    padding: 12px 24px 4px 24px;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* Workspace Toolbar */
+  .workspace-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 24px;
+    margin-top: 8px;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(0, 0, 0, 0.02);
+    flex-shrink: 0;
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .selection-info {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-right: 4px;
+
+      strong {
+        color: var(--text-primary);
+      }
+    }
+
+    .tb-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover:not(:disabled) {
+        background-color: var(--hover-bg);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      &.clear-btn {
+        width: 22px;
+        height: 22px;
+
+        mat-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+        }
+      }
+    }
+  }
+
+  .file-workspace-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+
+    .state-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      height: 200px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+
+      mat-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+      }
+
+      &.error {
+        color: #ef4444;
+      }
+
+      .spinner {
+        animation: spin 1.5s linear infinite;
+      }
+    }
+
+    .file-tree {
+      user-select: none;
+    }
+  }
+}
+
+/* Tree Structure Styles */
+.tree-node-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-node-item {
+  margin: 2px 0;
+}
+
+.node-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--hover-bg);
+  }
+
+  &.selected {
+    background-color: var(--selected-bg);
+    border-color: var(--selected-border);
+  }
+
+  &.inline-edit-row {
+    background-color: var(--hover-bg);
+    border-color: var(--input-border);
+    cursor: default;
+  }
+
+  .chevron-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+
+    &.expanded {
+      transform: rotate(90deg);
+    }
+  }
+
+  .chevron-spacer {
+    width: 18px;
+    flex-shrink: 0;
+  }
+
+  .node-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+
+    &.folder-icon {
+      color: var(--folder-icon-color);
+    }
+
+    &.file-icon {
+      color: var(--file-icon-color);
+    }
+  }
+
+  .node-name {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+
+  .inline-folder-input {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    outline: none;
+    font-family: inherit;
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+    }
+  }
+
+  .file-size {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: monospace;
+    margin-left: 8px;
+  }
+}
+
+.tree-children {
+  padding-left: 20px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

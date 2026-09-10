@@ -3,6 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { Agent, CreateAgentDto, UpdateAgentDto } from '../models/agent.model';
 
+export interface ConversationDto {
+  id: string;
+  agent_id: string;
+  title: string;
+  created_at?: string;
+}
+
 /**
  * Core service managing agent entities and active workspace selection state.
  */
@@ -25,6 +32,12 @@ export class ApiAgentService {
   /** Selected agents array for Crew mode (maximum 4) */
   readonly selectedCrewAgents = signal<Agent[]>([]);
 
+  /** Currently active conversation ID */
+  readonly activeConversationId = signal<string | null>(null);
+
+  /** List of conversations for the selected agent */
+  readonly conversations = signal<ConversationDto[]>([]);
+
   /** Loading indicator flag */
   readonly isLoading = signal<boolean>(false);
 
@@ -42,7 +55,7 @@ export class ApiAgentService {
       next: (data: Agent[]) => {
         this.agents.set(data);
         if (data.length > 0 && !this.selectedAgent()) {
-          this.selectedAgent.set(data[0]);
+          this.selectAgent(data[0]);
         }
         if (data.length > 0 && this.selectedCrewAgents().length === 0) {
           this.selectedCrewAgents.set([data[0]]);
@@ -62,23 +75,53 @@ export class ApiAgentService {
    */
   startCreating(): void {
     this.selectedAgent.set(null);
+    this.activeConversationId.set(null);
+    this.conversations.set([]);
     this.isCreating.set(true);
   }
 
   /**
-   * Selects an active single agent (Solo Mode).
+   * Selects an active single agent (Solo Mode) and loads its conversations.
    *
    * @param agent - The agent to select.
    */
   selectAgent(agent: Agent): void {
     this.isCreating.set(false);
     this.selectedAgent.set(agent);
+    this.activeConversationId.set(null);
+    this.loadAgentConversations(agent.id);
+  }
+
+  /**
+   * Fetches conversations for the given agent and selects the first one if available.
+   */
+  loadAgentConversations(agentId: string): void {
+    this.http.get<ConversationDto[]>(`${this.baseUrl}/${agentId}/conversations`).subscribe({
+      next: (convs) => {
+        this.conversations.set(convs);
+        if (convs.length > 0) {
+          this.activeConversationId.set(convs[0].id);
+        } else {
+          this.activeConversationId.set(null);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load conversations:', err);
+        this.conversations.set([]);
+        this.activeConversationId.set(null);
+      }
+    });
+  }
+
+  /**
+   * Sets the active conversation ID directly.
+   */
+  setActiveConversation(conversationId: string | null): void {
+    this.activeConversationId.set(conversationId);
   }
 
   /**
    * Toggles selection of an agent in Crew mode (max 4).
-   *
-   * @param agent - The agent to toggle.
    */
   toggleCrewAgent(agent: Agent): void {
     this.selectedCrewAgents.update((current) => {
@@ -98,19 +141,18 @@ export class ApiAgentService {
    */
   clearSelection(): void {
     this.selectedAgent.set(null);
+    this.activeConversationId.set(null);
+    this.conversations.set([]);
   }
 
   /**
    * Creates a new agent on the backend.
-   *
-   * @param payload - Configuration data for the new agent.
-   * @returns Observable emitting the created agent.
    */
   createAgent(payload: CreateAgentDto): Observable<Agent> {
     return this.http.post<Agent>(this.baseUrl, payload).pipe(
       tap((newAgent: Agent) => {
         this.agents.update((list) => [...list, newAgent]);
-        this.selectedAgent.set(newAgent);
+        this.selectAgent(newAgent);
         this.isCreating.set(false);
       })
     );
@@ -118,10 +160,6 @@ export class ApiAgentService {
 
   /**
    * Updates an existing agent.
-   *
-   * @param id - Unique identifier of the agent.
-   * @param payload - Partial configuration data to update.
-   * @returns Observable emitting the updated agent.
    */
   updateAgent(id: string, payload: UpdateAgentDto): Observable<Agent> {
     return this.http.put<Agent>(`${this.baseUrl}/${id}`, payload).pipe(
@@ -136,8 +174,6 @@ export class ApiAgentService {
 
   /**
    * Deletes an agent by its ID.
-   *
-   * @param id - Unique identifier of the agent to delete.
    */
   deleteAgent(id: string): void {
     this.http.delete<void>(`${this.baseUrl}/${id}`).subscribe({
@@ -146,7 +182,11 @@ export class ApiAgentService {
         this.agents.set(updatedList);
 
         if (this.selectedAgent()?.id === id) {
-          this.selectedAgent.set(updatedList.length > 0 ? updatedList[0] : null);
+          if (updatedList.length > 0) {
+            this.selectAgent(updatedList[0]);
+          } else {
+            this.clearSelection();
+          }
         }
         this.selectedCrewAgents.update((crew) => crew.filter((a) => a.id !== id));
       },

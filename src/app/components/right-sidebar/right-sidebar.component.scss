@@ -1,3 +1,8 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
 .slim-sidebar.right-sidebar {
   --bg-color: #0b1120;
   --text-color: #94a3b8;
@@ -14,7 +19,7 @@
   }
 
   width: 64px;
-  height: 100vh;
+  height: 100%;
   background-color: var(--bg-color);
   display: flex;
   flex-direction: column;
@@ -26,18 +31,22 @@
 
   .toggle-btn {
     box-shadow: none;
+    flex-shrink: 0;
   }
 
   .divider {
     width: 32px;
     margin: 12px 0;
     opacity: 0.15;
+    flex-shrink: 0;
   }
 
   .nav-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
 
     .nav-item {
       color: var(--text-color);
