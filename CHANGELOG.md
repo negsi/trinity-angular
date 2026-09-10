@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- `deleteMessage` HTTP request method in `ApiChatService` to handle message deletion endpoints.
+- `onDeleteMessage` handler in `ChatWorkspaceComponent` to delete messages and update the local reactive signal state.
+- Delete action button in `ChatWorkspaceComponent` message action toolbar.
+
 ### Changed
 
 ## [0.1.9] - 2026-09-10

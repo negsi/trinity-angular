@@ -387,4 +387,10 @@ export class ApiChatService {
   getFileDownloadUrl(conversationId: string, filePath: string): string {
     return `/api/v1/chat/conversations/${conversationId}/files/${encodeURIComponent(filePath)}`;
   }
+
+  deleteMessage(agentId: string, conversationId: string, messageId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}/messages/${messageId}`
+    );
+  }
 }

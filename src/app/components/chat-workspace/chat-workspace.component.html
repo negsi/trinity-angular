@@ -127,6 +127,16 @@
                         <mat-icon>refresh</mat-icon>
                       </button>
                     }
+
+                    <button 
+                      mat-icon-button 
+                      type="button" 
+                      matTooltip="Nachricht löschen" 
+                      [disabled]="isCurrentAgentStreaming()"
+                      (click)="onDeleteMessage(msg.id)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
                   </div>
                 </div>
               </div>
