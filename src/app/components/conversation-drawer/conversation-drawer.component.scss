@@ -22,7 +22,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 320px;
+  width: 400px;
   background-color: var(--header-bg);
   border-left: 1px solid var(--border-color);
   z-index: 25;
@@ -79,80 +79,76 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer; // Gesamter Listeneintrag ist ein Zeiger
       transition: background-color 0.15s ease;
-      color: var(--text-main);
 
       &:hover {
-        background-color: rgba(255, 255, 255, 0.05);
-
-        .delete-btn {
-          opacity: 1;
-        }
+        background-color: var(--bg-hover, rgba(0, 0, 0, 0.04));
       }
 
       &.active {
-        background-color: rgba(59, 130, 246, 0.12);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-
-        .conv-icon mat-icon {
-          color: var(--bubble-me-bg);
-        }
+        background-color: var(--bg-active, rgba(0, 0, 0, 0.06));
       }
 
-      .conv-icon mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        color: var(--text-sub);
+      .conv-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted, #888);
       }
 
       .conv-info {
-        flex: 1;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        flex: 1;
+        min-width: 0;
 
         .conv-title {
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           font-weight: 500;
+          color: var(--text-color, #333);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+
+          &.editable {
+            cursor: text; // Text-Cursor nur direkt über dem Titel
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin: -2px -4px;
+            display: inline-block;
+            width: fit-content;
+            max-width: 100%;
+            transition: background-color 0.15s ease;
+          }
+        }
+
+        .conv-title-input {
+          font-size: 0.9rem;
+          font-weight: 500;
+          font-family: inherit;
+          color: var(--text-color, #333);
+          background-color: var(--bg-surface, #ffffff);
+          border: 1.5px solid var(--primary-color, #6366f1);
+          border-radius: 6px;
+          padding: 2px 6px;
+          margin: -3px -7px;
+          outline: none;
+          width: 100%;
+          box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 99, 102, 241), 0.15);
+
+          &::selection {
+            background-color: var(--primary-color, #6366f1);
+            color: #ffffff;
+          }
         }
 
         .conv-date {
-          font-size: 0.7rem;
-          color: var(--text-sub);
+          font-size: 0.75rem;
+          color: var(--text-muted, #888);
           margin-top: 2px;
-        }
-      }
-
-      .delete-btn {
-        width: 28px;
-        height: 28px;
-        padding: 0; 
-        display: flex; 
-        align-items: center;
-        justify-content: center;
-        color: var(--text-sub);
-        opacity: 0;
-        transition: opacity 0.15s ease, color 0.15s ease;
-
-        &:hover {
-          color: #ef4444;
-        }
-
-        mat-icon {
-          font-size: 16px;
-          width: 16px;
-          height: 16px;
-          line-height: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
       }
     }
@@ -179,5 +175,55 @@
         margin: 0;
       }
     }
+  }
+}
+
+.conv-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+
+  .conv-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color, #333);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &.editable {
+      cursor: text;
+      border-radius: 4px;
+      padding: 2px 4px;
+      margin: -2px -4px;
+      transition: background-color 0.15s ease;
+    }
+  }
+
+  .conv-title-input {
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    color: var(--text-color, #333);
+    background-color: var(--bg-surface, #ffffff);
+    border: 1.5px solid var(--primary-color, #6366f1);
+    border-radius: 6px;
+    padding: 2px 6px;
+    margin: -3px -7px;
+    outline: none;
+    width: 100%;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 99, 102, 241), 0.15);
+
+    &::selection {
+      background-color: var(--primary-color, #6366f1);
+      color: #ffffff;
+    }
+  }
+
+  .conv-date {
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
+    margin-top: 2px;
   }
 }
