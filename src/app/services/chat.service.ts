@@ -399,4 +399,15 @@ export class ApiChatService {
       `${this.agentsUrl}/${agentId}/conversations/${conversationId}/messages`
     );
   }
+
+  updateConversationTitle(
+    agentId: string,
+    conversationId: string,
+    title: string
+  ): Observable<ConversationUI> {
+    return this.http.patch<ConversationUI>(
+      `${this.agentsUrl}/${agentId}/conversations/${conversationId}`,
+      { title }
+    );
+  }
 }

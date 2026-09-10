@@ -10,6 +10,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.2.1] - 2026-09-10
+
+### Added
+
+- **Conversation Drawer / Inline Rename**:
+  - `ConversationDrawerComponent`:
+    - Added `renameConversation` event output to emit title updates to parent components.
+    - Added inline editing state using `editingId` and `editingTitle` signals, alongside automatic element focus/selection (`titleInput`).
+    - Added `startRename`, `saveRename`, and `cancelRename` methods to handle inline editing lifecycle via Enter, Escape, or Blur events.
+  - `ApiChatService`:
+    - Added `updateConversationTitle` method to issue `PATCH` requests to `/agents/{agentId}/conversations/{conversationId}`.
+
+### Changed
+
+- **Conversation Drawer UI & Behavior**:
+  - `ConversationDrawerComponent`:
+    - Added `FormsModule` to component imports for `[(ngModel)]` binding on the title input field.
+    - Increased drawer panel width from `320px` to `400px` in SCSS.
+    - Extended the `onSelect` click handler across the entire list item (`.conv-item`) while stopping event propagation on the title element to prevent switching conversations during rename.
+    - Refactored conversation item typography, spacing, and hover states.
+- **Chat Workspace Component**:
+  - `ChatWorkspaceComponent`:
+    - Implemented `onRenameConversation` handler to send title updates via `ApiChatService` and reactively update the local `conversationsList` signal.
+    - Bound `(renameConversation)` event to `<app-conversation-drawer>` in the component template.
+
 ## [0.2.0] - 2026-09-10
 
 ### Added
@@ -279,7 +304,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.0...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.1...develop
+[0.2.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.1
 [0.2.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.0
 [0.1.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.9
 [0.1.8]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.8

@@ -466,4 +466,23 @@ export class ChatWorkspaceComponent {
       error: (err: unknown) => console.error('Failed to reset conversation:', err)
     });
   }
+
+  /**
+   * Handles renaming a conversation item.
+   *
+   * @param event - Object containing target conversation ID and new title.
+   */
+  onRenameConversation(event: { id: string; newTitle: string }): void {
+    const currentAgent = this.activeAgent();
+    if (!currentAgent) return;
+
+    this.chatService.updateConversationTitle(currentAgent.id, event.id, event.newTitle).subscribe({
+      next: (updated) => {
+        this.conversationsList.update((list) =>
+          list.map((c) => (c.id === updated.id ? { ...c, title: updated.title } : c))
+        );
+      },
+      error: (err: unknown) => console.error('Failed to rename conversation:', err)
+    });
+  }
 }

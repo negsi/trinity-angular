@@ -13,6 +13,7 @@
 
   <div class="drawer-content">
     @for (conv of conversations(); track conv.id) {
+      <!-- Zeile als Ganzes ist klickbar für die Auswahl -->
       <div 
         class="conv-item" 
         [class.active]="conv.id === activeConversationId()"
@@ -21,10 +22,35 @@
         <div class="conv-icon">
           <mat-icon>chat_bubble_outline</mat-icon>
         </div>
+
         <div class="conv-info">
-          <span class="conv-title">{{ conv.title || 'Unbenannte Konversation' }}</span>
-          <span class="conv-date">{{ formatDate(conv.created_at) }}</span>
+          @if (editingId() === conv.id) {
+            <input
+              #titleInput
+              type="text"
+              class="conv-title-input"
+              [ngModel]="editingTitle()"
+              (ngModelChange)="editingTitle.set($event)"
+              (click)="$event.stopPropagation()"
+              (keydown.enter)="saveRename(conv.id)"
+              (keydown.escape)="cancelRename()"
+              (blur)="saveRename(conv.id)"
+            />
+          } @else {
+            <!-- $event.stopPropagation() verhindert, dass beim Titelklick die Konversation gewechselt wird -->
+            <span 
+              class="conv-title editable" 
+              (click)="startRename($event, conv)"
+            >
+              {{ conv.title || 'Unbenannte Konversation' }}
+            </span>
+          }
+          
+          <span class="conv-date">
+            {{ formatDate(conv.created_at) }}
+          </span>
         </div>
+
         <button 
           mat-icon-button 
           class="delete-btn" 

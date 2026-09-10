@@ -1,5 +1,6 @@
-import { Component, input, output } from '@angular/core';
+import { Component, ElementRef, ViewChild, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -12,7 +13,7 @@ import { formatDateTime } from '../../utils/date.util';
 @Component({
   selector: 'app-conversation-drawer',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './conversation-drawer.component.html',
   styleUrl: './conversation-drawer.component.scss'
 })
@@ -35,6 +36,18 @@ export class ConversationDrawerComponent {
   /** Emits when deleting a conversation */
   readonly deleteConversation = output<string>();
 
+  /** Emits when renaming a conversation */
+  readonly renameConversation = output<{ id: string; newTitle: string }>();
+
+  /** ID of the conversation currently being edited */
+  readonly editingId = signal<string | null>(null);
+
+  /** Title string value during editing */
+  readonly editingTitle = signal<string>('');
+
+  /** Reference to input element for auto-focus/select */
+  @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
+
   /** Readonly date helper reference */
   readonly formatDate = formatDateTime;
 
@@ -44,6 +57,7 @@ export class ConversationDrawerComponent {
    * @param id - Conversation identifier.
    */
   onSelect(id: string): void {
+    if (this.editingId() === id) return;
     this.selectConversation.emit(id);
   }
 
@@ -56,5 +70,45 @@ export class ConversationDrawerComponent {
   onDelete(event: MouseEvent, id: string): void {
     event.stopPropagation();
     this.deleteConversation.emit(id);
+  }
+
+  /**
+   * Starts inline editing of a conversation title.
+   *
+   * @param event - Mouse event for stopping propagation.
+   * @param conv - Target conversation object.
+   */
+  startRename(event: MouseEvent, conv: ConversationUI): void {
+    event.stopPropagation();
+    this.editingId.set(conv.id);
+    this.editingTitle.set(conv.title || 'Unbenannte Konversation');
+
+    setTimeout(() => {
+      if (this.titleInput) {
+        this.titleInput.nativeElement.focus();
+        this.titleInput.nativeElement.select();
+      }
+    }, 0);
+  }
+
+  /**
+   * Saves the edited title and exits edit mode.
+   *
+   * @param id - Conversation identifier.
+   */
+  saveRename(id: string): void {
+    const trimmed = this.editingTitle().trim();
+    if (trimmed && this.editingId() === id) {
+      this.renameConversation.emit({ id, newTitle: trimmed });
+    }
+    this.cancelRename();
+  }
+
+  /**
+   * Cancels editing mode without saving changes.
+   */
+  cancelRename(): void {
+    this.editingId.set(null);
+    this.editingTitle.set('');
   }
 }
