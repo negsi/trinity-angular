@@ -4,11 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+# [Unreleased]
 
 ### Added
 
+- Added stacked tab navigation to the agent configuration component (`base` and `memory_ds` tabs).
+
 ### Changed
+
+- Refactored agent configuration layout to use vertical collapsible full-width sections for better usability and space management.
+- Streamlined SCSS variables and cleaned up unused code and comments in `agent-config.component.ts`.
 
 ## [0.2.1] - 2026-09-10
 
