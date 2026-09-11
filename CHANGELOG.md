@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Refactored agent configuration layout to use vertical collapsible full-width sections for better usability and space management.
 - Streamlined SCSS variables and cleaned up unused code and comments in `agent-config.component.ts`.
+- Prevented active stream cancellation on agent selection switches to maintain ongoing background tasks.
+- Added conditional checks to avoid redundant message reloads during ongoing streaming states.
 
 ## [0.2.1] - 2026-09-10
 

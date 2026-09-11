@@ -157,10 +157,7 @@ export class ChatWorkspaceComponent {
     toObservable(this.activeAgent)
       .pipe(
         filter((agent): agent is Agent => !!agent),
-        switchMap((agent) => {
-          this.chatService.cancelActiveStream(agent.id);
-          return this.chatService.getConversations(agent.id);
-        }),
+        switchMap((agent) => this.chatService.getConversations(agent.id)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
@@ -177,7 +174,14 @@ export class ChatWorkspaceComponent {
           if (convs && convs.length > 0 && currentAgent) {
             const latestConv = convs[0];
             this.activeConversationId.set(latestConv.id);
-            this.chatService.loadMessages(currentAgent.id, latestConv.id);
+            
+            // Laden wir Nachrichten nur, wenn für den Agenten nicht gerade bereits lokal gestreamt/gearbeitet wird
+            const isStreaming = this.chatService.isAgentStreaming(currentAgent.id)();
+            const existingMsgs = this.chatService.getMessagesSignal(currentAgent.id)();
+            
+            if (!isStreaming && existingMsgs.length === 0) {
+              this.chatService.loadMessages(currentAgent.id, latestConv.id);
+            }
           } else if (currentAgent) {
             this.activeConversationId.set(null);
             this.chatService.clearMessages(currentAgent.id);
@@ -192,7 +196,6 @@ export class ChatWorkspaceComponent {
           }
         }
       });
-
     // Native Zoneless Auto-Scroll
     effect(() => {
       const groups = this.messageGroups();
