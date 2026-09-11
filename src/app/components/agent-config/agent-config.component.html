@@ -1,5 +1,6 @@
 <form class="config-container" [class.light-mode]="isLightMode()" [formGroup]="agentForm" (ngSubmit)="onSave()">
 
+  <!-- Header -->
   <div class="config-header">
     <div class="header-title">
       <h2>Agent Settings</h2>
@@ -7,103 +8,290 @@
     </div>
   </div>
 
+  <!-- Content Area mit vertikal gestapelten Full-Width Tabs -->
   <div class="config-scroll-area">
-    <!-- Form Fields -->
-    <div class="form-section">
-      <!-- NAME -->
-      <div class="field-row">
-        <label class="field-label" for="agentNameInput">NAME</label>
-        <input 
-          #nameInput
-          id="agentNameInput"
-          type="text" 
-          class="custom-input" 
-          formControlName="name"
-          required
-        />
-      </div>
-
-      <!-- DESCR. -->
-      <div class="field-row">
-        <label class="field-label" for="agentDescInput">DESCR.</label>
-        <textarea 
-          id="agentDescInput"
-          class="custom-textarea" 
-          rows="1"
-          formControlName="description"
-        ></textarea>
-      </div>
-    </div>
-
-    <!-- System Prompt / Editor Section -->
-    <div class="editor-section">
-      <div class="editor-toolbar">
-        <div class="toolbar-left">
-          <button type="button" class="tb-btn"><b>B</b></button>
-          <button type="button" class="tb-btn"><i>I</i></button>
-          <button type="button" class="tb-btn"><u>U</u></button>
-          <div class="toolbar-divider"></div>
-          <button type="button" class="tb-btn"><mat-icon>format_list_bulleted</mat-icon></button>
-          <button type="button" class="tb-btn"><mat-icon>format_list_numbered</mat-icon></button>
+    
+    <!-- TAB 1: Base Configuration -->
+    <div class="stacked-tab" [class.is-expanded]="activeTab() === 'base'">
+      <button 
+        type="button" 
+        class="stacked-tab-header"
+        (click)="setTab('base')"
+      >
+        <div class="header-left">
+          <mat-icon>tune</mat-icon>
+          <span>Base Configuration</span>
         </div>
-        <div class="toolbar-right">
-          <button type="button" class="tb-btn"><mat-icon>image</mat-icon></button>
-        </div>
-      </div>
+        <mat-icon class="expand-icon">
+          {{ activeTab() === 'base' ? 'expand_less' : 'expand_more' }}
+        </mat-icon>
+      </button>
 
-      <textarea 
-        class="prompt-textarea" 
-        formControlName="system_prompt"
-        placeholder="Enter System Prompt..."
-      ></textarea>
-    </div>
+      @if (activeTab() === 'base') {
+        <div class="stacked-tab-body">
+          <div class="form-section">
+            <!-- NAME -->
+            <div class="field-row">
+              <label class="field-label" for="agentNameInput">NAME</label>
+              <input 
+                #nameInput
+                id="agentNameInput"
+                type="text" 
+                class="custom-input" 
+                formControlName="name"
+                required
+              />
+            </div>
 
-    <!-- MEMORY SECTION -->
-    <div class="memory-section">
-      <div class="memory-header">
-        <div class="memory-title">
-          <mat-icon class="memory-icon">history</mat-icon>
-          <span class="memory-label">MEMORY & CONTEXT</span>
-        </div>
-        <mat-slide-toggle 
-          formControlName="memory_enabled"
-          color="primary">
-        </mat-slide-toggle>
-      </div>
-
-      @if (agentForm.controls.memory_enabled.value) {
-        <div class="memory-options">
-          <!-- MODE -->
-          <div class="field-row">
-            <label class="field-label">MODE</label>
-            <mat-select 
-              class="custom-select" 
-              formControlName="memory_mode">
-              <mat-option value="user_only">User Messages Only</mat-option>
-              <mat-option value="all">Full Conversation (User & Agent)</mat-option>
-            </mat-select>
+            <!-- DESCR. -->
+            <div class="field-row">
+              <label class="field-label" for="agentDescInput">DESCR.</label>
+              <textarea 
+                id="agentDescInput"
+                class="custom-textarea" 
+                rows="1"
+                formControlName="description"
+              ></textarea>
+            </div>
           </div>
 
-          <!-- LIMIT -->
-          <div class="field-row">
-            <label class="field-label">LIMIT</label>
-            <div class="limit-group">
-              <mat-select 
-                class="custom-select" 
-                formControlName="memory_limit_type">
-                <mat-option value="all">Unlimited History</mat-option>
-                <mat-option value="message_count">Last N Messages</mat-option>
-              </mat-select>
+          <!-- Persona & Instructions Section -->
+          <div class="editor-section">
+            <div class="editor-header">
+              <span class="editor-title">PERSONA & INSTRUCTIONS</span>
 
-              @if (agentForm.controls.memory_limit_type.value === 'message_count') {
-                <input 
-                  type="number" 
-                  class="custom-input count-input" 
-                  formControlName="memory_message_count"
-                  min="1"
-                  max="100"
-                  placeholder="Count"
-                />
+              <div class="editor-tabs">
+                <button 
+                  type="button" 
+                  class="tab-btn" 
+                  [class.active]="editorMode() === 'edit'"
+                  (click)="setEditorMode('edit')"
+                >
+                  <mat-icon>edit</mat-icon>
+                  Edit
+                </button>
+                <button 
+                  type="button" 
+                  class="tab-btn" 
+                  [class.active]="editorMode() === 'preview'"
+                  (click)="setEditorMode('preview')"
+                >
+                  <mat-icon>visibility</mat-icon>
+                  Preview
+                </button>
+              </div>
+            </div>
+
+            @if (editorMode() === 'edit') {
+              <div class="editor-toolbar">
+                <div class="toolbar-left">
+                  <!-- Text Formatting Controls -->
+                  <button type="button" class="tb-btn" title="Bold" (click)="applyFormat('**', '**', 'bold text')">
+                    <b>B</b>
+                  </button>
+                  <button type="button" class="tb-btn" title="Italic" (click)="applyFormat('*', '*', 'italic text')">
+                    <i>I</i>
+                  </button>
+                  <button type="button" class="tb-btn" title="Underline" (click)="applyFormat('<u>', '</u>', 'underlined text')">
+                    <u>U</u>
+                  </button>
+                  <button type="button" class="tb-btn" title="Strikethrough" (click)="applyFormat('~~', '~~', 'strikethrough text')">
+                    <s>S</s>
+                  </button>
+
+                  <div class="toolbar-divider"></div>
+
+                  <!-- Headings Dropdown Trigger (H1 - H6) -->
+                  <button type="button" class="tb-btn heading-dropdown-btn" [matMenuTriggerFor]="headingMenu" title="Headings">
+                    <span>H</span>
+                    <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+                  </button>
+
+                  <!-- Headings Menu (H1 - H6) -->
+                  <mat-menu #headingMenu="matMenu" class="heading-menu">
+                    <button mat-menu-item (click)="applyHeading(1)">
+                      <span class="h-item h1">Heading 1</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(2)">
+                      <span class="h-item h2">Heading 2</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(3)">
+                      <span class="h-item h3">Heading 3</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(4)">
+                      <span class="h-item h4">Heading 4</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(5)">
+                      <span class="h-item h5">Heading 5</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(6)">
+                      <span class="h-item h6">Heading 6</span>
+                    </button>
+                  </mat-menu>
+
+                  <div class="toolbar-divider"></div>
+
+                  <button type="button" class="tb-btn" title="Bullet List" (click)="applyFormat('- ', '', 'List item')">
+                    <mat-icon>format_list_bulleted</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Numbered List" (click)="applyFormat('1. ', '', 'List item')">
+                    <mat-icon>format_list_numbered</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Quote" (click)="applyFormat('> ', '', 'Quote text')">
+                    <mat-icon>format_quote</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Code Block" (click)="applyFormat('```\n', '\n```', 'code here')">
+                    <mat-icon>code</mat-icon>
+                  </button>
+                </div>
+
+                <div class="toolbar-right">
+                  <button type="button" class="tb-btn" title="Insert Link" (click)="applyFormat('[', '](https://example.com)', 'link text')">
+                    <mat-icon>link</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Insert Image" (click)="applyFormat('![', '](https://example.com/image.png)', 'alt text')">
+                    <mat-icon>image</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <textarea 
+                #promptTextarea
+                class="prompt-textarea" 
+                formControlName="system_prompt"
+                placeholder="Define agent persona, responsibilities, and instructions in Markdown..."
+              ></textarea>
+            } @else {
+              <div class="markdown-preview" [innerHTML]="parsedMarkdown"></div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- TAB 2: Memory & Datasources -->
+    <div class="stacked-tab" [class.is-expanded]="activeTab() === 'memory_ds'">
+      <button 
+        type="button" 
+        class="stacked-tab-header"
+        (click)="setTab('memory_ds')"
+      >
+        <div class="header-left">
+          <mat-icon>storage</mat-icon>
+          <span>Memory & Datasources</span>
+        </div>
+        <mat-icon class="expand-icon">
+          {{ activeTab() === 'memory_ds' ? 'expand_less' : 'expand_more' }}
+        </mat-icon>
+      </button>
+
+      @if (activeTab() === 'memory_ds') {
+        <div class="stacked-tab-body">
+          <!-- MEMORY SECTION -->
+          <div class="memory-section">
+            <div class="memory-header">
+              <div class="memory-title">
+                <mat-icon class="memory-icon">history</mat-icon>
+                <span class="memory-label">MEMORY & CONTEXT</span>
+              </div>
+              <mat-slide-toggle 
+                formControlName="memory_enabled"
+                color="primary">
+              </mat-slide-toggle>
+            </div>
+
+            @if (agentForm.controls.memory_enabled.value) {
+              <div class="memory-options">
+                <!-- MODE -->
+                <div class="field-row">
+                  <label class="field-label">MODE</label>
+                  <mat-select 
+                    class="custom-select" 
+                    formControlName="memory_mode">
+                    <mat-option value="user_only">User Messages Only</mat-option>
+                    <mat-option value="all">Full Conversation (User & Agent)</mat-option>
+                  </mat-select>
+                </div>
+
+                <!-- LIMIT -->
+                <div class="field-row">
+                  <label class="field-label">LIMIT</label>
+                  <div class="limit-group">
+                    <mat-select 
+                      class="custom-select" 
+                      formControlName="memory_limit_type">
+                      <mat-option value="all">Unlimited History</mat-option>
+                      <mat-option value="message_count">Last N Messages</mat-option>
+                    </mat-select>
+
+                    @if (agentForm.controls.memory_limit_type.value === 'message_count') {
+                      <input 
+                        type="number" 
+                        class="custom-input count-input" 
+                        formControlName="memory_message_count"
+                        min="1"
+                        max="100"
+                        placeholder="Count"
+                      />
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- DATASOURCES SECTION -->
+          <div class="datasources-section">
+            <div class="ds-header">
+              <div class="ds-header-left">
+                <mat-icon class="ds-icon">attach_file</mat-icon>
+                <span class="ds-label">DATASOURCES</span>
+                <span class="ds-dot">·</span>
+                <span class="ds-size">{{ dataSources().length }} Datei(en)</span>
+              </div>
+
+              <input 
+                #fileInput 
+                type="file" 
+                multiple 
+                (change)="onFilesSelected($event)" 
+                style="display: none" 
+              />
+
+              <button 
+                type="button" 
+                mat-button 
+                class="upload-btn" 
+                (click)="fileInput.click()" 
+                [disabled]="isUploading() || !agentService.selectedAgent()"
+              >
+                <mat-icon>cloud_upload</mat-icon>
+                {{ isUploading() ? 'Lädt...' : 'Datei anhängen' }}
+              </button>
+            </div>
+
+            <div class="ds-grid">
+              @for (file of dataSources(); track file.id) {
+                <div class="ds-card">
+                  <div class="file-badge" [class]="file.type">
+                    {{ file.type | uppercase }}
+                  </div>
+                  <div class="file-info">
+                    <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                    <span class="file-size">{{ file.size }}</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    class="remove-ds-btn" 
+                    (click)="removeDatasource(file.id)"
+                    title="Datei entfernen">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              } @empty {
+                <div class="ds-empty">
+                  <span>Keine Dateien verknüpft</span>
+                </div>
               }
             </div>
           </div>
@@ -111,61 +299,6 @@
       }
     </div>
 
-    <!-- DATASOURCES -->
-    <div class="datasources-section">
-      <div class="ds-header">
-        <div class="ds-header-left">
-          <mat-icon class="ds-icon">attach_file</mat-icon>
-          <span class="ds-label">DATASOURCES</span>
-          <span class="ds-dot">·</span>
-          <span class="ds-size">{{ dataSources().length }} Datei(en)</span>
-        </div>
-
-        <input 
-          #fileInput 
-          type="file" 
-          multiple 
-          (change)="onFilesSelected($event)" 
-          style="display: none" 
-        />
-
-        <button 
-          type="button" 
-          mat-button 
-          class="upload-btn" 
-          (click)="fileInput.click()" 
-          [disabled]="isUploading() || !agentService.selectedAgent()"
-        >
-          <mat-icon>cloud_upload</mat-icon>
-          {{ isUploading() ? 'Lädt...' : 'Datei anhängen' }}
-        </button>
-      </div>
-
-      <div class="ds-grid">
-        @for (file of dataSources(); track file.id) {
-          <div class="ds-card">
-            <div class="file-badge" [class]="file.type">
-              {{ file.type | uppercase }}
-            </div>
-            <div class="file-info">
-              <span class="file-name" [title]="file.name">{{ file.name }}</span>
-              <span class="file-size">{{ file.size }}</span>
-            </div>
-            <button 
-              type="button" 
-              class="remove-ds-btn" 
-              (click)="removeDatasource(file.id)"
-              title="Datei entfernen">
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-        } @empty {
-          <div class="ds-empty">
-            <span>Keine Dateien verknüpft</span>
-          </div>
-        }
-      </div>
-    </div>
   </div>
 
   <!-- Sticky Footer Buttons -->

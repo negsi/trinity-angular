@@ -4,11 +4,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+# [Unreleased]
 
 ### Added
 
 ### Changed
+
+# [0.2.2] - 2026-09-11
+
+### Added
+
+- Added stacked tab navigation to the agent configuration component (`base` and `memory_ds` tabs).
+- Added a full Markdown editor for the agent's persona and system instructions featuring a toolbar with text formatting controls (bold, italic, underline, strikethrough), heading dropdown menus (H1-H6), lists, quotes, code blocks, links, and image insertion.
+- Added live Markdown preview mode using `marked` for rendering system prompts.
+- Added robust conversation ID fallback resolution and optimistic UI updates with automatic rollback on failure when deleting chat messages.
+- Added silent background message reloading after streaming completions to synchronize temporary IDs with real database UUIDs seamlessly.
+
+### Changed
+
+- Refactored agent configuration layout to use vertical collapsible full-width sections for better usability and space management.
+- Streamlined SCSS variables and cleaned up unused code and comments in `agent-config.component.ts`.
+- Prevented active stream cancellation on agent selection switches to maintain ongoing background tasks.
+- Added conditional checks to avoid redundant message reloads during ongoing streaming states.
 
 ## [0.2.1] - 2026-09-10
 
@@ -304,7 +321,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.1...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.2...develop
+[0.2.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.2
 [0.2.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.1
 [0.2.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.0
 [0.1.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.9

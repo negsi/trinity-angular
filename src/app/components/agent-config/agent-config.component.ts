@@ -5,6 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
+import { marked } from 'marked';
 import { ApiAgentService } from '../../services/agent.service';
 import { DatasourceService } from '../../services/datasource.service';
 import { DatasourceUI, DatasourceUploadResponse } from '../../models/datasource.model';
@@ -21,9 +23,9 @@ export interface AgentForm {
   memory_message_count: FormControl<number | null>;
 }
 
-/**
- * Settings and configuration panel for customizing AI agents with typed reactive forms.
- */
+export type ConfigTab = 'base' | 'memory_ds';
+export type EditorMode = 'edit' | 'preview';
+
 @Component({
   selector: 'app-agent-config',
   standalone: true,
@@ -33,13 +35,13 @@ export interface AgentForm {
     MatIconModule,
     MatButtonModule,
     MatSlideToggleModule,
-    MatSelectModule
+    MatSelectModule,
+    MatMenuModule
   ],
   templateUrl: './agent-config.component.html',
   styleUrl: './agent-config.component.scss'
 })
 export class AgentConfigComponent {
-  /** Mode indicator signal */
   readonly isLightMode = input.required<boolean>();
 
   private readonly fb = inject(FormBuilder);
@@ -47,10 +49,15 @@ export class AgentConfigComponent {
   private readonly datasourceService = inject(DatasourceService);
   readonly agentService = inject(ApiAgentService);
 
-  /** Reference to the agent name text input */
   readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
+  readonly promptTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('promptTextarea');
 
-  /** Typed reactive form group */
+  /** Active navigation tab signal */
+  readonly activeTab = signal<ConfigTab>('base');
+
+  /** Active editor view mode signal */
+  readonly editorMode = signal<EditorMode>('edit');
+
   readonly agentForm: FormGroup<AgentForm> = this.fb.group({
     name: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     description: this.fb.control('', { nonNullable: true }),
@@ -61,11 +68,9 @@ export class AgentConfigComponent {
     memory_message_count: this.fb.control<number | null>(10)
   });
 
-  /** Upload status and datasource items signals */
   readonly dataSources = signal<DatasourceUI[]>([]);
   readonly isUploading = signal<boolean>(false);
 
-  /** Available skills configuration */
   readonly skills = signal<SkillOption[]>([
     { id: '1', label: 'Fetch URL', systemName: 'fetch_url', selected: false },
     { id: '2', label: 'Run Container', systemName: 'run_container', selected: false },
@@ -80,7 +85,6 @@ export class AgentConfigComponent {
   ]);
 
   constructor() {
-    // Synchronize agent state with the form on selection change
     effect(() => {
       const selected = this.agentService.selectedAgent();
 
@@ -121,24 +125,66 @@ export class AgentConfigComponent {
     });
   }
 
+  setTab(tab: ConfigTab): void {
+    this.activeTab.set(tab);
+  }
+
+  setEditorMode(mode: EditorMode): void {
+    this.editorMode.set(mode);
+  }
+
   /**
-   * Toggles the selection status of a skill pill.
+   * Applies Markdown formatting at cursor position or selection
    */
+  applyFormat(prefix: string, suffix: string = prefix, defaultText: string = ''): void {
+    const textarea = this.promptTextarea()?.nativeElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+    const selectedText = currentText.substring(start, end) || defaultText;
+
+    const newText = 
+      currentText.substring(0, start) + 
+      `${prefix}${selectedText}${suffix}` + 
+      currentText.substring(end);
+
+    this.agentForm.controls.system_prompt.setValue(newText);
+    this.agentForm.controls.system_prompt.markAsDirty();
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + prefix.length + selectedText.length;
+      textarea.setSelectionRange(start + prefix.length, newCursorPos);
+    });
+  }
+
+  /**
+   * Applies Heading formatting (H1 - H6)
+   */
+  applyHeading(level: number): void {
+    const prefix = '#'.repeat(level) + ' ';
+    this.applyFormat(prefix, '', `Heading ${level}`);
+  }
+
+  /**
+   * Parses Markdown to HTML string for the preview mode using marked
+   */
+  get parsedMarkdown(): string {
+    const rawText = this.agentForm.controls.system_prompt.value || '';
+    return marked.parse(rawText) as string;
+  }
+
   toggleSkill(skillId: string): void {
     this.skills.update((list) =>
       list.map((s) => (s.id === skillId ? { ...s, selected: !s.selected } : s))
     );
   }
 
-  /**
-   * Triggers upload processing for selected files.
-   */
   onFilesSelected(event: Event): void {
     const selectedAgent = this.agentService.selectedAgent();
-    if (!selectedAgent) {
-      console.warn('No agent selected. Please create or select an agent first.');
-      return;
-    }
+    if (!selectedAgent) return;
 
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
@@ -172,9 +218,6 @@ export class AgentConfigComponent {
     });
   }
 
-  /**
-   * Saves the current form as either a new agent or an updated record.
-   */
   onSave(): void {
     if (this.agentForm.invalid) {
       this.agentForm.markAllAsTouched();
@@ -198,35 +241,23 @@ export class AgentConfigComponent {
 
     if (selected) {
       this.agentService.updateAgent(selected.id, payload as UpdateAgentDto).subscribe({
-        next: () => {
-          this.agentForm.markAsPristine();
-          console.log('Agent updated successfully.');
-        },
+        next: () => this.agentForm.markAsPristine(),
         error: (err: unknown) => console.error('Error updating agent:', err)
       });
     } else {
       this.agentService.createAgent(payload).subscribe({
-        next: () => {
-          this.agentForm.markAsPristine();
-          console.log('Agent created successfully.');
-        },
+        next: () => this.agentForm.markAsPristine(),
         error: (err: unknown) => console.error('Error creating agent:', err)
       });
     }
   }
 
-  /**
-   * Deletes the currently active agent.
-   */
   onDelete(): void {
     const selected = this.agentService.selectedAgent();
     if (!selected) return;
     this.agentService.deleteAgent(selected.id);
   }
 
-  /**
-   * Resets the entire configuration form back to default state.
-   */
   resetForm(): void {
     this.agentForm.reset({
       name: '',
@@ -252,17 +283,9 @@ export class AgentConfigComponent {
     );
   }
 
-  /**
-   * Removes a linked datasource from the agent.
-   *
-   * @param datasourceId - Unique identifier of the datasource.
-   */
   removeDatasource(datasourceId: string): void {
     const agentId = this.agentService.selectedAgent()?.id;
-    if (!agentId || !datasourceId) {
-      console.warn('Missing Agent ID or Datasource ID.');
-      return;
-    }
+    if (!agentId || !datasourceId) return;
 
     this.datasourceService.deleteDatasource(agentId, datasourceId).subscribe({
       next: () => {
@@ -270,9 +293,7 @@ export class AgentConfigComponent {
           sources.filter((ds) => ds.id !== datasourceId)
         );
       },
-      error: (err: unknown) => {
-        console.error('Error deleting datasource:', err);
-      }
+      error: (err: unknown) => console.error('Error deleting datasource:', err)
     });
   }
 }

@@ -2,6 +2,7 @@
   display: block;
   height: 100%;
   width: 100%;
+  overflow: hidden; // Prevent host from spilling horizontal scrollbars
 }
 
 .config-container {
@@ -10,13 +11,12 @@
   --input-border: rgba(255, 255, 255, 0.1);
   --text-primary: #f8fafc;
   --text-muted: #64748b;
-  --pill-bg: transparent;
-  --pill-text: #94a3b8;
-  --pill-active-bg: #1e3a8a;
+  --pill-active-bg: rgba(59, 130, 246, 0.1);
   --pill-active-text: #60a5fa;
   --toolbar-border: rgba(255, 255, 255, 0.06);
   --card-bg: rgba(255, 255, 255, 0.02);
   --card-border: rgba(255, 255, 255, 0.08);
+  --accent-color: #3b82f6;
 
   &.light-mode {
     --bg-color: #ffffff;
@@ -24,26 +24,27 @@
     --input-border: #e2e8f0;
     --text-primary: #0f172a;
     --text-muted: #94a3b8;
-    --pill-bg: transparent;
-    --pill-text: #64748b;
     --pill-active-bg: #eff6ff;
     --pill-active-text: #2563eb;
     --toolbar-border: #f1f5f9;
     --card-bg: #ffffff;
     --card-border: #e2e8f0;
+    --accent-color: #2563eb;
   }
 
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background-color: var(--bg-color);
   box-sizing: border-box;
+  overflow-x: hidden; // Kills horizontal scrollbar
 
   .config-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px 19px 24px;
+    padding: 16px 20px;
     border-bottom: 1px solid var(--toolbar-border);
     flex-shrink: 0;
 
@@ -54,7 +55,7 @@
 
       h2 {
         margin: 0;
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: var(--text-primary);
       }
@@ -68,20 +69,91 @@
     }
   }
 
+  /* Full-width Stacked Tabs Area */
   .config-scroll-area {
     flex: 1;
-    overflow-y: auto;
-    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    min-height: 0;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden; // Ensures no bottom scrollbar
+
+    .stacked-tab {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+
+      /* Full width tab header bar with divider */
+      .stacked-tab-header {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--toolbar-border);
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: left;
+        transition: background-color 0.15s ease, color 0.15s ease;
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+        }
+
+        .expand-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+
+        &:hover {
+          color: var(--text-primary);
+          background-color: var(--pill-active-bg);
+        }
+      }
+
+      &.is-expanded {
+        flex: 1; // Fills available space when open
+        display: flex;
+        flex-direction: column;
+
+        .stacked-tab-header {
+          color: var(--pill-active-text);
+          background-color: var(--pill-active-bg);
+        }
+      }
+
+      .stacked-tab-body {
+        flex: 1;
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        min-width: 0; // Prevents grid/flex overflows
+      }
+    }
   }
 
   .field-row {
     display: grid;
     grid-template-columns: 80px 1fr;
     align-items: start;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    width: 100%;
 
     .field-label {
       font-family: monospace;
@@ -105,7 +177,7 @@
       font-family: inherit;
 
       &:focus {
-        border-color: #3b82f6;
+        border-color: var(--accent-color);
       }
     }
 
@@ -115,21 +187,79 @@
     }
   }
 
+  /* Full Markdown Editor Section Styles */
   .editor-section {
-    border-top: 1px solid var(--toolbar-border);
-    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 250px;
+
+    .editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+
+      .editor-title {
+        font-family: monospace;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 0.08em;
+      }
+
+      .editor-tabs {
+        display: flex;
+        background-color: var(--input-bg);
+        border: 1px solid var(--input-border);
+        border-radius: 8px;
+        padding: 2px;
+        gap: 2px;
+
+        .tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: transparent;
+          border: none;
+          color: var(--text-muted);
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          mat-icon {
+            font-size: 14px;
+            width: 14px;
+            height: 14px;
+          }
+
+          &.active {
+            background-color: var(--pill-active-bg);
+            color: var(--pill-active-text);
+          }
+
+          &:hover:not(.active) {
+            color: var(--text-primary);
+          }
+        }
+      }
+    }
 
     .editor-toolbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 16px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
       border-bottom: 1px solid var(--toolbar-border);
 
       .toolbar-left, .toolbar-right {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
       }
 
       .toolbar-divider {
@@ -144,10 +274,16 @@
         border: none;
         color: var(--text-muted);
         cursor: pointer;
-        padding: 4px 6px;
+        padding: 4px 8px;
         border-radius: 4px;
         display: flex;
         align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 600;
+        min-width: 28px;
+        height: 28px;
+        transition: background-color 0.15s ease, color 0.15s ease;
 
         mat-icon {
           font-size: 18px;
@@ -156,23 +292,72 @@
         }
 
         &:hover {
+          background-color: var(--pill-active-bg);
           color: var(--text-primary);
+        }
+      }
+
+      .heading-dropdown-btn {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 4px 6px;
+
+        .dropdown-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          margin-left: -2px;
         }
       }
     }
 
     .prompt-textarea {
       width: 100%;
-      min-height: 130px;
+      flex: 1;
+      min-height: 180px;
       background: transparent;
       border: none;
       outline: none;
       color: var(--text-primary);
       font-size: 0.95rem;
       line-height: 1.6;
-      padding: 16px 0;
+      padding: 8px 0;
       resize: vertical;
-      font-family: inherit;
+      font-family: monospace;
+      box-sizing: border-box;
+    }
+
+    .markdown-preview {
+      width: 100%;
+      flex: 1;
+      min-height: 180px;
+      padding: 8px 0;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      overflow-y: auto;
+
+      h1, h2, h3, h4, h5, h6 {
+        margin-top: 12px;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+      }
+
+      code {
+        background-color: var(--input-bg);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.85em;
+      }
+
+      blockquote {
+        border-left: 3px solid var(--accent-color);
+        margin: 8px 0;
+        padding-left: 12px;
+        color: var(--text-muted);
+      }
     }
   }
 
@@ -183,12 +368,18 @@
     .ds-header {
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
       margin-bottom: 16px;
       font-family: monospace;
       font-size: 0.75rem;
       color: var(--text-muted);
       letter-spacing: 0.08em;
+
+      .ds-header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
       .ds-icon {
         font-size: 16px;
@@ -274,15 +465,27 @@
           }
         }
       }
+
+      .ds-empty {
+        grid-column: span 2;
+        padding: 16px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        border: 1px dashed var(--card-border);
+        border-radius: 8px;
+      }
     }
   }
 
   .config-footer {
-    padding: 16px 24px 24px 24px;
+    padding: 14px 20px;
     display: flex;
     justify-content: flex-end;
     align-items: center;
     gap: 12px;
+    border-top: 1px solid var(--toolbar-border);
+    flex-shrink: 0;
 
     button {
       display: flex;
@@ -337,14 +540,13 @@
 }
 
 .memory-section {
-  border-top: 1px solid var(--toolbar-border);
-  padding-top: 20px;
+  padding-bottom: 12px;
 
   .memory-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
     .memory-title {
       display: flex;
@@ -402,6 +604,34 @@
       ::ng-deep .mat-mdc-select-arrow {
         color: var(--text-muted);
       }
+    }
+  }
+}
+
+/* Headings Menu Custom Styling */
+::ng-deep .heading-menu {
+  background-color: var(--bg-color, #0b1120) !important;
+  border: 1px solid var(--card-border, rgba(255, 255, 255, 0.1)) !important;
+  border-radius: 8px !important;
+
+  .mat-mdc-menu-item {
+    min-height: 36px !important;
+    height: 36px !important;
+    
+    .h-item {
+      color: var(--text-primary, #f8fafc);
+      font-weight: 600;
+
+      &.h1 { font-size: 1.1rem; }
+      &.h2 { font-size: 1rem; }
+      &.h3 { font-size: 0.95rem; }
+      &.h4 { font-size: 0.9rem; }
+      &.h5 { font-size: 0.85rem; }
+      &.h6 { font-size: 0.8rem; color: var(--text-muted, #64748b); }
+    }
+
+    &:hover {
+      background-color: var(--pill-active-bg, rgba(59, 130, 246, 0.1)) !important;
     }
   }
 }

@@ -157,10 +157,7 @@ export class ChatWorkspaceComponent {
     toObservable(this.activeAgent)
       .pipe(
         filter((agent): agent is Agent => !!agent),
-        switchMap((agent) => {
-          this.chatService.cancelActiveStream(agent.id);
-          return this.chatService.getConversations(agent.id);
-        }),
+        switchMap((agent) => this.chatService.getConversations(agent.id)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
@@ -177,7 +174,14 @@ export class ChatWorkspaceComponent {
           if (convs && convs.length > 0 && currentAgent) {
             const latestConv = convs[0];
             this.activeConversationId.set(latestConv.id);
-            this.chatService.loadMessages(currentAgent.id, latestConv.id);
+            
+            // Laden wir Nachrichten nur, wenn für den Agenten nicht gerade bereits lokal gestreamt/gearbeitet wird
+            const isStreaming = this.chatService.isAgentStreaming(currentAgent.id)();
+            const existingMsgs = this.chatService.getMessagesSignal(currentAgent.id)();
+            
+            if (!isStreaming && existingMsgs.length === 0) {
+              this.chatService.loadMessages(currentAgent.id, latestConv.id);
+            }
           } else if (currentAgent) {
             this.activeConversationId.set(null);
             this.chatService.clearMessages(currentAgent.id);
@@ -192,7 +196,6 @@ export class ChatWorkspaceComponent {
           }
         }
       });
-
     // Native Zoneless Auto-Scroll
     effect(() => {
       const groups = this.messageGroups();
@@ -440,17 +443,33 @@ export class ChatWorkspaceComponent {
   onDeleteMessage(messageId: string): void {
     const currentAgent = this.activeAgent();
     const convId = this.activeConversationId();
-    if (!currentAgent || !convId || !messageId) return;
+    if (!currentAgent || !messageId) return;
 
-    this.chatService.deleteMessage(currentAgent.id, convId, messageId).subscribe({
-      next: () => {
-        const currentMsgs = this.chatService.getMessagesSignal(currentAgent.id)();
-        this.chatService.setMessages(
-          currentAgent.id,
-          currentMsgs.filter((m) => m.id !== messageId)
-        );
-      },
-      error: (err: unknown) => console.error('Failed to delete message:', err)
+    // 1. Nachrichten-ID aus dem aktuellen Signal ermitteln
+    const currentMsgs = this.chatService.getMessagesSignal(currentAgent.id)();
+    const targetMsg = currentMsgs.find(m => m.id === messageId);
+
+    // Falls aus irgendeinem Grund keine ConvId da ist, versuchen wir sie aus der Nachricht zu ziehen
+    const effectiveConvId = convId || targetMsg?.conversation_id;
+
+    if (!effectiveConvId) {
+      console.warn('Keine Conversation-ID für das Löschen gefunden.');
+      return;
+    }
+
+    // 2. Optimistisches UI-Update (Nachricht sofort aus dem Template ausblenden)
+    this.chatService.setMessages(
+      currentAgent.id,
+      currentMsgs.filter((m) => m.id !== messageId)
+    );
+
+    // 3. Backend-Call durchführen
+    this.chatService.deleteMessage(currentAgent.id, effectiveConvId, messageId).subscribe({
+      error: (err: unknown) => {
+        console.error('Failed to delete message on backend, rolling back:', err);
+        // Fallback: Bei Fehler im Backend die Nachricht wieder im UI herstellen
+        this.chatService.setMessages(currentAgent.id, currentMsgs);
+      }
     });
   }
 

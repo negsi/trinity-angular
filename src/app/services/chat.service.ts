@@ -111,6 +111,27 @@ export class ApiChatService {
       });
   }
 
+  /**
+   * Silently reloads conversation history in the background to swap temporary
+   * streaming IDs with real database UUIDs without triggering global UI loading spinners.
+   */
+  private silentReloadMessages(agentId: string, conversationId: string): void {
+    this.http
+      .get<Message[]>(
+        `${this.agentsUrl}/${agentId}/conversations/${conversationId}/history?limit=50`
+      )
+      .subscribe({
+        next: (data: Message[]) => {
+          if (data && data.length > 0) {
+            this.setMessages(agentId, data);
+          }
+        },
+        error: (err: unknown) => {
+          console.error('Failed to silently reload messages:', err);
+        }
+      });
+  }
+
   cancelActiveStream(agentId: string): void {
     const controller = this.abortControllersMap.get(agentId);
     if (controller) {
@@ -139,6 +160,8 @@ export class ApiChatService {
       console.error('Missing agent_id (recipient_id) in sendMessage payload.');
       return;
     }
+
+    let activeConvId = dto.conversation_id || '';
 
     this.cancelActiveStream(agentId);
 
@@ -195,7 +218,12 @@ export class ApiChatService {
       if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       if (!response.body) return;
 
-      await this.readEventStream(agentId, response.body, tempAgentMsgId, onNewConvCreated);
+      const handleNewConv = (newId: string) => {
+        activeConvId = newId;
+        onNewConvCreated?.(newId);
+      };
+
+      await this.readEventStream(agentId, response.body, tempAgentMsgId, handleNewConv);
     } catch (err: unknown) {
       if ((err as Error)?.name === 'AbortError') {
         return;
@@ -205,6 +233,10 @@ export class ApiChatService {
     } finally {
       this.setAgentStreaming(agentId, false);
       this.abortControllersMap.delete(agentId);
+
+      if (activeConvId) {
+        this.silentReloadMessages(agentId, activeConvId);
+      }
     }
   }
 
