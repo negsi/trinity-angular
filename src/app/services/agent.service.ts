@@ -89,7 +89,6 @@ export class ApiAgentService {
     this.isCreating.set(false);
     this.selectedAgent.set(agent);
     this.activeConversationId.set(null);
-    this.loadAgentConversations(agent.id);
   }
 
   /**

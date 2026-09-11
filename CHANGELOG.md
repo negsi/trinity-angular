@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+# [0.2.3] - 2026-09-11
+
+### Added
+
+- Add distinctUntilChanged operator to active agent observable in chat workspace component to prevent redundant conversation list re-fetches
+
+### Changed
+
+- Optimize conversation switching flow by setting active conversation ID directly instead of reloading entire conversation list
+
 # [0.2.2] - 2026-09-11
 
 ### Added
@@ -321,7 +331,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.2...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.3...develop
+[0.2.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.3
 [0.2.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.2
 [0.2.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.1
 [0.2.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.0
