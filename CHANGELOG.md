@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Added stacked tab navigation to the agent configuration component (`base` and `memory_ds` tabs).
+- Added a full Markdown editor for the agent's persona and system instructions featuring a toolbar with text formatting controls (bold, italic, underline, strikethrough), heading dropdown menus (H1-H6), lists, quotes, code blocks, links, and image insertion.
+- Added live Markdown preview mode using `marked` for rendering system prompts.
 
 ### Changed
 

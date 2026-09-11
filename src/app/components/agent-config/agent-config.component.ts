@@ -5,6 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
+import { marked } from 'marked';
 import { ApiAgentService } from '../../services/agent.service';
 import { DatasourceService } from '../../services/datasource.service';
 import { DatasourceUI, DatasourceUploadResponse } from '../../models/datasource.model';
@@ -22,6 +24,7 @@ export interface AgentForm {
 }
 
 export type ConfigTab = 'base' | 'memory_ds';
+export type EditorMode = 'edit' | 'preview';
 
 @Component({
   selector: 'app-agent-config',
@@ -32,7 +35,8 @@ export type ConfigTab = 'base' | 'memory_ds';
     MatIconModule,
     MatButtonModule,
     MatSlideToggleModule,
-    MatSelectModule
+    MatSelectModule,
+    MatMenuModule
   ],
   templateUrl: './agent-config.component.html',
   styleUrl: './agent-config.component.scss'
@@ -46,9 +50,13 @@ export class AgentConfigComponent {
   readonly agentService = inject(ApiAgentService);
 
   readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
+  readonly promptTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('promptTextarea');
 
   /** Active navigation tab signal */
   readonly activeTab = signal<ConfigTab>('base');
+
+  /** Active editor view mode signal */
+  readonly editorMode = signal<EditorMode>('edit');
 
   readonly agentForm: FormGroup<AgentForm> = this.fb.group({
     name: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -119,6 +127,53 @@ export class AgentConfigComponent {
 
   setTab(tab: ConfigTab): void {
     this.activeTab.set(tab);
+  }
+
+  setEditorMode(mode: EditorMode): void {
+    this.editorMode.set(mode);
+  }
+
+  /**
+   * Applies Markdown formatting at cursor position or selection
+   */
+  applyFormat(prefix: string, suffix: string = prefix, defaultText: string = ''): void {
+    const textarea = this.promptTextarea()?.nativeElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+    const selectedText = currentText.substring(start, end) || defaultText;
+
+    const newText = 
+      currentText.substring(0, start) + 
+      `${prefix}${selectedText}${suffix}` + 
+      currentText.substring(end);
+
+    this.agentForm.controls.system_prompt.setValue(newText);
+    this.agentForm.controls.system_prompt.markAsDirty();
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + prefix.length + selectedText.length;
+      textarea.setSelectionRange(start + prefix.length, newCursorPos);
+    });
+  }
+
+  /**
+   * Applies Heading formatting (H1 - H6)
+   */
+  applyHeading(level: number): void {
+    const prefix = '#'.repeat(level) + ' ';
+    this.applyFormat(prefix, '', `Heading ${level}`);
+  }
+
+  /**
+   * Parses Markdown to HTML string for the preview mode using marked
+   */
+  get parsedMarkdown(): string {
+    const rawText = this.agentForm.controls.system_prompt.value || '';
+    return marked.parse(rawText) as string;
   }
 
   toggleSkill(skillId: string): void {

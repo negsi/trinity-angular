@@ -55,31 +55,115 @@
             </div>
           </div>
 
-          <!-- System Prompt / Editor Section -->
+          <!-- Persona & Instructions Section -->
           <div class="editor-section">
-            <div class="editor-toolbar">
-              <div class="toolbar-left">
-                <!--
-                  // Comment code always in English language:
-                  // Formatting toolbar action controls
-                -->
-                <button type="button" class="tb-btn"><b>B</b></button>
-                <button type="button" class="tb-btn"><i>I</i></button>
-                <button type="button" class="tb-btn"><u>U</u></button>
-                <div class="toolbar-divider"></div>
-                <button type="button" class="tb-btn"><mat-icon>format_list_bulleted</mat-icon></button>
-                <button type="button" class="tb-btn"><mat-icon>format_list_numbered</mat-icon></button>
-              </div>
-              <div class="toolbar-right">
-                <button type="button" class="tb-btn"><mat-icon>image</mat-icon></button>
+            <div class="editor-header">
+              <span class="editor-title">PERSONA & INSTRUCTIONS</span>
+
+              <div class="editor-tabs">
+                <button 
+                  type="button" 
+                  class="tab-btn" 
+                  [class.active]="editorMode() === 'edit'"
+                  (click)="setEditorMode('edit')"
+                >
+                  <mat-icon>edit</mat-icon>
+                  Edit
+                </button>
+                <button 
+                  type="button" 
+                  class="tab-btn" 
+                  [class.active]="editorMode() === 'preview'"
+                  (click)="setEditorMode('preview')"
+                >
+                  <mat-icon>visibility</mat-icon>
+                  Preview
+                </button>
               </div>
             </div>
 
-            <textarea 
-              class="prompt-textarea" 
-              formControlName="system_prompt"
-              placeholder="Enter System Prompt..."
-            ></textarea>
+            @if (editorMode() === 'edit') {
+              <div class="editor-toolbar">
+                <div class="toolbar-left">
+                  <!-- Text Formatting Controls -->
+                  <button type="button" class="tb-btn" title="Bold" (click)="applyFormat('**', '**', 'bold text')">
+                    <b>B</b>
+                  </button>
+                  <button type="button" class="tb-btn" title="Italic" (click)="applyFormat('*', '*', 'italic text')">
+                    <i>I</i>
+                  </button>
+                  <button type="button" class="tb-btn" title="Underline" (click)="applyFormat('<u>', '</u>', 'underlined text')">
+                    <u>U</u>
+                  </button>
+                  <button type="button" class="tb-btn" title="Strikethrough" (click)="applyFormat('~~', '~~', 'strikethrough text')">
+                    <s>S</s>
+                  </button>
+
+                  <div class="toolbar-divider"></div>
+
+                  <!-- Headings Dropdown Trigger (H1 - H6) -->
+                  <button type="button" class="tb-btn heading-dropdown-btn" [matMenuTriggerFor]="headingMenu" title="Headings">
+                    <span>H</span>
+                    <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+                  </button>
+
+                  <!-- Headings Menu (H1 - H6) -->
+                  <mat-menu #headingMenu="matMenu" class="heading-menu">
+                    <button mat-menu-item (click)="applyHeading(1)">
+                      <span class="h-item h1">Heading 1</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(2)">
+                      <span class="h-item h2">Heading 2</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(3)">
+                      <span class="h-item h3">Heading 3</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(4)">
+                      <span class="h-item h4">Heading 4</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(5)">
+                      <span class="h-item h5">Heading 5</span>
+                    </button>
+                    <button mat-menu-item (click)="applyHeading(6)">
+                      <span class="h-item h6">Heading 6</span>
+                    </button>
+                  </mat-menu>
+
+                  <div class="toolbar-divider"></div>
+
+                  <button type="button" class="tb-btn" title="Bullet List" (click)="applyFormat('- ', '', 'List item')">
+                    <mat-icon>format_list_bulleted</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Numbered List" (click)="applyFormat('1. ', '', 'List item')">
+                    <mat-icon>format_list_numbered</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Quote" (click)="applyFormat('> ', '', 'Quote text')">
+                    <mat-icon>format_quote</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Code Block" (click)="applyFormat('```\n', '\n```', 'code here')">
+                    <mat-icon>code</mat-icon>
+                  </button>
+                </div>
+
+                <div class="toolbar-right">
+                  <button type="button" class="tb-btn" title="Insert Link" (click)="applyFormat('[', '](https://example.com)', 'link text')">
+                    <mat-icon>link</mat-icon>
+                  </button>
+                  <button type="button" class="tb-btn" title="Insert Image" (click)="applyFormat('![', '](https://example.com/image.png)', 'alt text')">
+                    <mat-icon>image</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <textarea 
+                #promptTextarea
+                class="prompt-textarea" 
+                formControlName="system_prompt"
+                placeholder="Define agent persona, responsibilities, and instructions in Markdown..."
+              ></textarea>
+            } @else {
+              <div class="markdown-preview" [innerHTML]="parsedMarkdown"></div>
+            }
           </div>
         </div>
       }
