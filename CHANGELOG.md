@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+# [0.2.2] - 2026-09-11
+
+### Added
+
 - Added stacked tab navigation to the agent configuration component (`base` and `memory_ds` tabs).
 - Added a full Markdown editor for the agent's persona and system instructions featuring a toolbar with text formatting controls (bold, italic, underline, strikethrough), heading dropdown menus (H1-H6), lists, quotes, code blocks, links, and image insertion.
 - Added live Markdown preview mode using `marked` for rendering system prompts.
@@ -315,7 +321,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.1...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.2...develop
+[0.2.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.2
 [0.2.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.1
 [0.2.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.0
 [0.1.9]: https://github.com/negsi/trinity-angular/releases/tag/v0.1.9
