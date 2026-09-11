@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-# [Unreleased]
-
 ### Added
 
+- Add distinctUntilChanged operator to active agent observable in chat workspace component to prevent redundant conversation list re-fetches
+
 ### Changed
+
+- Optimize conversation switching flow by setting active conversation ID directly instead of reloading entire conversation list
 
 # [0.2.2] - 2026-09-11
 

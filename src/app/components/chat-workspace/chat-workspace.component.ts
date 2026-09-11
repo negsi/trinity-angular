@@ -19,7 +19,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarkdownModule } from 'ngx-markdown';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { filter, switchMap } from 'rxjs';
+import { filter, switchMap, distinctUntilChanged } from 'rxjs';
 
 import { ApiAgentService } from '../../services/agent.service';
 import { ApiChatService } from '../../services/chat.service';
@@ -157,7 +157,8 @@ export class ChatWorkspaceComponent {
     toObservable(this.activeAgent)
       .pipe(
         filter((agent): agent is Agent => !!agent),
-        switchMap((agent) => this.chatService.getConversations(agent.id)),
+        distinctUntilChanged((prev: Agent, curr: Agent) => prev.id === curr.id),
+        switchMap((agent: Agent) => this.chatService.getConversations(agent.id)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
@@ -365,8 +366,8 @@ export class ChatWorkspaceComponent {
       if (this.chatService.draftAgentId === currentAgent.id) {
         this.chatService.draftAgentId = null;
       }
+
       this.activeConversationId.set(newConvId);
-      this.loadConversations();
     });
   }
 
