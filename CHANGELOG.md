@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+# [Unreleased]
+
+### Added
+
+### Changed
+
+# [0.2.4] - 2026-09-15
+
 ### Added
 
 - Add group management component (`group-management-dialog`) for viewing, creating, and editing agent groups and assignments
@@ -338,7 +346,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.3...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.4...develop
+[0.2.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.4
 [0.2.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.3
 [0.2.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.2
 [0.2.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.1
