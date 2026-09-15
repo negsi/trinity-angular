@@ -1,5 +1,6 @@
-import { Component, input, inject, OnInit, signal, output } from '@angular/core';
+import { Component, input, inject, OnInit, signal, computed, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -14,6 +15,7 @@ export type AgentViewMode = 'single' | 'multi';
   standalone: true,
   imports: [
     CommonModule, 
+    FormsModule,
     MatIconModule, 
     MatButtonModule, 
     MatTooltipModule
@@ -28,7 +30,21 @@ export class AgentListComponent implements OnInit {
   readonly isLightMode = input.required<boolean>();
   readonly isCollapsed = signal<boolean>(this.getInitialCollapseState());
   
-  // View-Mode Signal ('solo' vs 'crew')
+  // Such-Signal & Computed Filter
+  readonly searchQuery = signal<string>('');
+  readonly filteredAgents = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    const allAgents = this.agentService.agents();
+    
+    if (!query) return allAgents;
+    
+    return allAgents.filter((agent) =>
+      agent.name.toLowerCase().includes(query) ||
+      (agent.description && agent.description.toLowerCase().includes(query))
+    );
+  });
+
+  // View-Mode Signal ('single' vs 'multi')
   readonly viewMode = signal<AgentViewMode>(this.getInitialViewMode());
   readonly viewModeChange = output<AgentViewMode>();
 
@@ -72,6 +88,10 @@ export class AgentListComponent implements OnInit {
         this.agentService.toggleCrewAgent(current);
       }
     }
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
   }
 
   onAgentClick(agent: Agent): void {

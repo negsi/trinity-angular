@@ -21,7 +21,6 @@
           </button>
         </div>
       </div>
-
     </div>
     
     <button 
@@ -35,6 +34,25 @@
     </button>
   </div>
 
+  <!-- NEU: Suchfeld zwischen Header und Liste -->
+  <div class="search-container">
+    <div class="search-input-wrapper">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Agenten suchen..." 
+        [ngModel]="searchQuery()" 
+        (ngModelChange)="searchQuery.set($event)"
+      />
+      @if (searchQuery()) {
+        <button type="button" class="clear-btn" (click)="clearSearch()">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
   <div class="list-content">
     @if (agentService.isLoading()) {
       <div class="state-message">
@@ -45,7 +63,7 @@
         <span class="full-text">{{ agentService.error() }}</span>
       </div>
     } @else {
-      @for (agent of agentService.agents(); track agent.id) {
+      @for (agent of filteredAgents(); track agent.id) {
         <div 
           class="agent-item" 
           [class.selected]="viewMode() === 'single' ? agentService.selectedAgent()?.id === agent.id : isCrewSelected(agent.id)"

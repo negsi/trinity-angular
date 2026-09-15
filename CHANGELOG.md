@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-# [Unreleased]
-
 ### Added
 
+- Add search functionality with a reactive search input field and clear button to filter agents by name or description in the agent list component
+- Add computed signal (`filteredAgents`) to dynamically filter the agent list based on user search queries
+
 ### Changed
+
+- Update agent list component layout and styles to integrate the search container seamlessly between the header and the agent items
+- Adapt agent list template loop to iterate over filtered agents instead of the complete agent collection
 
 # [0.2.3] - 2026-09-11
 

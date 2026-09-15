@@ -8,6 +8,7 @@
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
+  /* Eingeklappter Zustand */
   &.collapsed {
     width: 60px;
 
@@ -17,6 +18,26 @@
 
       .header-title {
         display: none;
+      }
+    }
+
+    .search-container {
+      padding: 8px 6px;
+
+      .search-input-wrapper {
+        justify-content: center;
+        padding: 0;
+        background-color: transparent;
+        border-color: transparent;
+
+        .search-input,
+        .clear-btn {
+          display: none;
+        }
+
+        .search-icon {
+          margin: 0;
+        }
       }
     }
 
@@ -36,6 +57,7 @@
     }
   }
 
+  /* 1. Header */
   .list-header {
     display: flex;
     align-items: center;
@@ -50,7 +72,6 @@
       gap: 10px;
       white-space: nowrap;
 
-      /* Moderner Pill-Switch Toggle */
       .switch-toggle-pill {
         display: flex;
         align-items: center;
@@ -109,6 +130,76 @@
     }
   }
 
+  /* 2. Such-Container (Jetzt auf Top-Level unter container) */
+  .search-container {
+    padding: 10px 12px 6px 12px;
+
+    .search-input-wrapper {
+      display: flex;
+      align-items: center;
+      background-color: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+      border-radius: 10px;
+      padding: 0 10px;
+      height: 36px;
+      transition: all 0.2s ease;
+
+      &:focus-within {
+        border-color: #6366f1;
+        background-color: rgba(0, 0, 0, 0.02);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+      }
+
+      .search-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--text-secondary);
+        margin-right: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-size: 0.825rem;
+
+        &::placeholder {
+          color: var(--text-secondary);
+          opacity: 0.7;
+        }
+      }
+
+      .clear-btn {
+        background: transparent;
+        border: none;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--text-secondary);
+        border-radius: 50%;
+
+        &:hover {
+          color: var(--text-primary);
+        }
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+  }
+
+  /* 3. Liste */
   .list-content {
     flex: 1;
     overflow-y: auto;
@@ -148,7 +239,6 @@
           font-weight: 600;
         }
 
-        /* Pfeil / Chevron beim Selektieren entfernen */
         .chevron-icon,
         mat-icon.arrow,
         &::after {
@@ -251,7 +341,6 @@
   padding: 2px;
   gap: 2px;
 
-  /* In Dark Mode/Light Mode Variablen einbinden, falls vorhanden */
   .light-mode & {
     background-color: #f1f5f9;
   }
@@ -275,7 +364,7 @@
 
     &.active {
       background-color: #ffffff;
-      color: #6366f1; /* Primärfarbe / Violett */
+      color: #6366f1;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
       font-weight: 700;
     }
