@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+# [0.2.4] - 2026-09-15
+
+### Added
+
+- Add group management component (`group-management-dialog`) for viewing, creating, and editing agent groups and assignments
+- Add `ApiGroupService` to handle group REST API operations (`loadGroups`, `createGroup`, `updateGroup`, `deleteGroup`, `updateGroupAgents`)
+- Add `Group` model and DTOs (`CreateGroupDto`, `UpdateGroupDto`)
+- Add group filtering, collapsing, inline group creation, and inline renaming in the `AgentListComponent`
+- Add group dropdown trigger and menu UI with checkboxes and counters in agent list header
+
+### Changed
+
+- Update `Agent` model to include `groups: string[]` and `CreateAgentDto` with `group_ids`
+- Refactor `AgentListComponent` template to display grouped and un-grouped agent sections using Angular templates
+
 # [0.2.3] - 2026-09-11
 
 ### Added
@@ -331,7 +346,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.3...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.4...develop
+[0.2.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.4
 [0.2.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.3
 [0.2.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.2
 [0.2.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.1

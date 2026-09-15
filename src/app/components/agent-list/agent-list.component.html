@@ -1,6 +1,113 @@
 <div class="agent-list-container" [class.light-mode]="isLightMode()" [class.collapsed]="isCollapsed()">
   <div class="list-header">
     <div class="header-title">
+      <!-- Gruppen-Dropdown Pill -->
+      <button 
+        type="button"
+        class="group-dropdown-pill"
+        [matMenuTriggerFor]="groupMenu"
+        matTooltip="Gruppen filtern"
+      >
+        <span>Gruppen</span>
+        <mat-icon>expand_more</mat-icon>
+      </button>
+
+      <mat-menu 
+        #groupMenu="matMenu" 
+        xPosition="after"
+        [class]="isLightMode() ? 'group-select-menu light-theme' : 'group-select-menu dark-theme'"
+      >
+        <div class="menu-container" (click)="$event.stopPropagation()">
+          
+          <!-- Header -->
+          <div class="menu-header">
+            <span class="menu-title">Gruppen anzeigen</span>
+            <button 
+              type="button" 
+              class="add-group-icon-btn" 
+              (click)="startAddGroup($event)" 
+              title="Neue Gruppe anlegen"
+            >
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+
+          <div class="menu-divider"></div>
+
+          <!-- Gruppenliste -->
+          <div class="group-select-list">
+            <!-- Neues Listenelement (Inline-Erstellung) -->
+            @if (isCreatingGroup()) {
+              <div class="menu-item-row new-item-row">
+                <mat-icon class="new-item-icon">add</mat-icon>
+                <input 
+                  #groupInput
+                  type="text" 
+                  class="group-rename-input"
+                  placeholder="Name..." 
+                  [(ngModel)]="newGroupName"
+                  (keyup.enter)="commitAddGroup($event)"
+                  (keyup.escape)="cancelAddGroup($event)"
+                  (blur)="commitAddGroup($event)"
+                  (click)="$event.stopPropagation()"
+                />
+              </div>
+            }
+
+            @for (group of groupService.groups(); track group.id) {
+              <div class="menu-item-row" (click)="toggleGroupVisibility(group.id)">
+                
+                @if (editingGroupId() === group.id) {
+                  <!-- Umbenennen: Input-Feld -->
+                  <div class="rename-row-wrapper" (click)="$event.stopPropagation()">
+                    <input
+                      #renameInput
+                      type="text"
+                      class="group-rename-input"
+                      [ngModel]="editingGroupName()"
+                      (ngModelChange)="editingGroupName.set($event)"
+                      (keyup.enter)="saveGroupRename(group.id, $event)"
+                      (keyup.escape)="cancelGroupRename($event)"
+                      (blur)="saveGroupRename(group.id, $event)"
+                    />
+                  </div>
+                } @else {
+                  <!-- Entkoppelte Checkbox & Label -->
+                  <div class="checkbox-label-wrapper">
+                    <mat-checkbox 
+                      class="custom-menu-checkbox"
+                      [checked]="isGroupCheckedForSelected(group.id)"
+                      [disabled]="selectedAgentIds().length === 0"
+                      (click)="$event.stopPropagation()"
+                      (change)="toggleGroupForSelectedAgents(group.id, $event.checked)"
+                    ></mat-checkbox>
+                    <span 
+                      class="group-name-text editable"
+                      (click)="startGroupRename($event, group)"
+                    >
+                      {{ group.name }}
+                    </span>
+                  </div>
+                }
+
+                <div class="group-actions">
+                  <span class="group-count">{{ group.agent_count }}</span>
+                  <button type="button" class="icon-btn-danger" (click)="deleteGroup(group.id, $event)" title="Gruppe löschen">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+            } @empty {
+              @if (!isCreatingGroup()) {
+                <div class="menu-empty-state">Keine Gruppen vorhanden</div>
+              }
+            }
+          </div>
+
+        </div>
+      </mat-menu>
+
+      <!-- Single / Multi Switch Toggle -->
       <div class="switch-toggle-pill">
         <div class="view-mode-toggle">
           <button 
@@ -21,7 +128,6 @@
           </button>
         </div>
       </div>
-
     </div>
     
     <button 
@@ -35,6 +141,25 @@
     </button>
   </div>
 
+  <!-- Suchfeld -->
+  <div class="search-container">
+    <div class="search-input-wrapper">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Agenten suchen..." 
+        [ngModel]="searchQuery()" 
+        (ngModelChange)="searchQuery.set($event)"
+      />
+      @if (searchQuery()) {
+        <button type="button" class="clear-btn" (click)="clearSearch()">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
   <div class="list-content">
     @if (agentService.isLoading()) {
       <div class="state-message">
@@ -45,42 +170,80 @@
         <span class="full-text">{{ agentService.error() }}</span>
       </div>
     } @else {
-      @for (agent of agentService.agents(); track agent.id) {
-        <div 
-          class="agent-item" 
-          [class.selected]="viewMode() === 'single' ? agentService.selectedAgent()?.id === agent.id : isCrewSelected(agent.id)"
-          [class.disabled]="viewMode() === 'multi' && !isCrewSelected(agent.id) && agentService.selectedCrewAgents().length >= 4"
-          (click)="onAgentClick(agent)"
-          [title]="isCollapsed() ? agent.name : ''"
-        >
-          <div 
-            class="avatar-badge" 
-            [style.background-color]="getAvatarBg(agent.name)"
-          >
-            {{ getInitials(agent.name) }}
-            @if (viewMode() === 'multi' && isCrewSelected(agent.id)) {
-              <span class="crew-badge-check">
-                <mat-icon>check</mat-icon>
-              </span>
-            } @else {
-              <span class="status-indicator"></span>
-            }
+      
+      <!-- Aktive Gruppen -->
+      @for (groupData of groupedViewData().grouped; track groupData.group.id) {
+        <div class="group-section">
+          <div class="group-header" (click)="toggleGroupCollapse(groupData.group.id)">
+            <mat-icon class="collapse-icon">
+              {{ groupData.isCollapsed ? 'chevron_right' : 'expand_more' }}
+            </mat-icon>
+            <mat-icon class="folder-icon">folder</mat-icon>
+            <span class="group-title">{{ groupData.group.name }}</span>
+            <span class="group-badge">{{ groupData.agents.length }}</span>
           </div>
 
-          <div class="agent-details">
-            <div class="agent-top">
-              <span class="agent-name">{{ agent.name }}</span>
+          @if (!groupData.isCollapsed) {
+            <div class="group-agents">
+              @for (agent of groupData.agents; track agent.id) {
+                <ng-container *ngTemplateOutlet="agentItemTemplate; context: { $implicit: agent }"></ng-container>
+              } @empty {
+                <div class="group-empty">Keine Agenten in dieser Gruppe</div>
+              }
             </div>
-            <p class="agent-desc">
-              {{ agent.description || 'Keine Beschreibung hinterlegt' }}
-            </p>
-          </div>
+          }
         </div>
+      }
+
+      <!-- Ungruppierte Agenten -->
+      @if (groupedViewData().grouped.length > 0 && groupedViewData().ungrouped.length > 0) {
+        <div class="group-divider">
+          <span>Weitere Agenten</span>
+        </div>
+      }
+
+      @for (agent of groupedViewData().ungrouped; track agent.id) {
+        <ng-container *ngTemplateOutlet="agentItemTemplate; context: { $implicit: agent }"></ng-container>
       } @empty {
-        <div class="state-message">
-          <span class="full-text">Keine Agenten gefunden.</span>
-        </div>
+        @if (groupedViewData().grouped.length === 0) {
+          <div class="state-message">
+            <span class="full-text">Keine Agenten gefunden.</span>
+          </div>
+        }
       }
     }
   </div>
 </div>
+
+<ng-template #agentItemTemplate let-agent>
+  <div 
+    class="agent-item" 
+    [class.selected]="viewMode() === 'single' ? agentService.selectedAgent()?.id === agent.id : isCrewSelected(agent.id)"
+    [class.disabled]="viewMode() === 'multi' && !isCrewSelected(agent.id) && agentService.selectedCrewAgents().length >= 4"
+    (click)="onAgentClick(agent)"
+    [title]="isCollapsed() ? agent.name : ''"
+  >
+    <div 
+      class="avatar-badge" 
+      [style.background-color]="getAvatarBg(agent.name)"
+    >
+      {{ getInitials(agent.name) }}
+      @if (viewMode() === 'multi' && isCrewSelected(agent.id)) {
+        <span class="crew-badge-check">
+          <mat-icon>check</mat-icon>
+        </span>
+      } @else {
+        <span class="status-indicator"></span>
+      }
+    </div>
+
+    <div class="agent-details">
+      <div class="agent-top">
+        <span class="agent-name">{{ agent.name }}</span>
+      </div>
+      <p class="agent-desc">
+        {{ agent.description || 'Keine Beschreibung hinterlegt' }}
+      </p>
+    </div>
+  </div>
+</ng-template>

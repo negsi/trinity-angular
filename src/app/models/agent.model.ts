@@ -28,6 +28,7 @@ export interface Agent {
   name: string;
   description?: string;
   system_prompt: string;
+  groups: string[];
   skills: Skill[];
   datasources?: DatasourceEntity[];
   created_at?: string;
@@ -44,6 +45,7 @@ export interface CreateAgentDto {
   name: string;
   description: string;
   system_prompt: string;
+  group_ids?: string[];
   skills: string[];
   memory_enabled: boolean;
   memory_mode: 'user_only' | 'all';
