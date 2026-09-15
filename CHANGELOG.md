@@ -6,14 +6,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Add dynamic border color styling to message bubbles based on sender avatar background color in the chat workspace template
-- Add modern accent borders and customized layout styling for full-width message rows in the chat workspace component styles
+- Add group management component (`group-management-dialog`) for viewing, creating, and editing agent groups and assignments
+- Add `ApiGroupService` to handle group REST API operations (`loadGroups`, `createGroup`, `updateGroup`, `deleteGroup`, `updateGroupAgents`)
+- Add `Group` model and DTOs (`CreateGroupDto`, `UpdateGroupDto`)
+- Add group filtering, collapsing, inline group creation, and inline renaming in the `AgentListComponent`
+- Add group dropdown trigger and menu UI with checkboxes and counters in agent list header
 
 ### Changed
 
-- Update chat workspace message rows to occupy full width with flexible alignment and refined spacing
-- Refine chat bubble styling with compact padding, border radius, shadows, and optimized markdown paragraph handling
-- Redesign own message styling to mirror incoming message layout with right-sided avatar placement and a distinct right accent border
+- Update `Agent` model to include `groups: string[]` and `CreateAgentDto` with `group_ids`
+- Refactor `AgentListComponent` template to display grouped and un-grouped agent sections using Angular templates
 
 # [0.2.3] - 2026-09-11
 

@@ -1,0 +1,134 @@
+h2[mat-dialog-title] {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, #f8fafc);
+}
+
+mat-dialog-content {
+  padding-top: 8px !important;
+}
+
+.add-group-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+
+  .new-group-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--text-primary, #fff);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+
+    &:focus {
+      border-color: #6366f1;
+    }
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+  }
+
+  button {
+    height: 34px;
+    font-size: 0.8rem;
+    
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-right: 2px;
+    }
+  }
+}
+
+.groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  .empty-groups {
+    padding: 24px 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  .group-editor-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+
+      .group-name-input {
+        flex: 1;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+        padding: 4px 8px;
+        color: var(--text-primary, #fff);
+        font-weight: 600;
+        font-size: 0.9rem;
+        outline: none;
+
+        &:focus {
+          border-color: #6366f1;
+        }
+      }
+
+      button {
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+
+    .agent-assignment {
+      .assignment-title {
+        display: block;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+
+      .agent-checkboxes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+
+        mat-checkbox {
+          font-size: 0.8rem;
+          color: var(--text-primary, #cbd5e1);
+        }
+      }
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 12px 0 0 0 !important;
+  margin-bottom: 0;
+}

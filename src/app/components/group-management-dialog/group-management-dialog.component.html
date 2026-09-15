@@ -1,0 +1,68 @@
+<h2 mat-dialog-title>Gruppen verwalten</h2>
+
+<mat-dialog-content>
+  <!-- Neue Gruppe anlegen -->
+  <div class="add-group-row">
+    <input 
+      type="text" 
+      class="new-group-input"
+      placeholder="Neue Gruppe Name..." 
+      [(ngModel)]="newGroupName"
+      (keydown.enter)="addGroup()"
+    />
+    <button 
+      mat-flat-button 
+      color="primary" 
+      (click)="addGroup()" 
+      [disabled]="!newGroupName.trim()"
+    >
+      <mat-icon>add</mat-icon> Hinzufügen
+    </button>
+  </div>
+
+  <!-- Liste bestehender Gruppen -->
+  <div class="groups-list">
+    @for (group of groups(); track group.id) {
+      <div class="group-editor-card">
+        <div class="card-header">
+          <input 
+            type="text" 
+            class="group-name-input" 
+            [(ngModel)]="group.name" 
+          />
+          <button 
+            mat-icon-button 
+            color="warn" 
+            (click)="deleteGroup(group.id)"
+            matTooltip="Gruppe löschen"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+
+        <div class="agent-assignment">
+          <span class="assignment-title">Agenten zuweisen:</span>
+          <div class="agent-checkboxes">
+            @for (agent of agents(); track agent.id) {
+              <mat-checkbox 
+                [checked]="isAgentInGroup(agent, group.id)" 
+                (change)="toggleAgentInGroup(agent, group.id)"
+              >
+                {{ agent.name }}
+              </mat-checkbox>
+            }
+          </div>
+        </div>
+      </div>
+    } @empty {
+      <div class="empty-groups">
+        Keine Gruppen vorhanden. Lege oben eine neue Gruppe an.
+      </div>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="dialogRef.close()">Abbrechen</button>
+  <button mat-flat-button color="primary" (click)="save()">Speichern</button>
+</mat-dialog-actions>
