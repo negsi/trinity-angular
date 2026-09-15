@@ -6,13 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Add search functionality with a reactive search input field and clear button to filter agents by name or description in the agent list component
-- Add computed signal (`filteredAgents`) to dynamically filter the agent list based on user search queries
+- Add dynamic border color styling to message bubbles based on sender avatar background color in the chat workspace template
+- Add modern accent borders and customized layout styling for full-width message rows in the chat workspace component styles
 
 ### Changed
 
-- Update agent list component layout and styles to integrate the search container seamlessly between the header and the agent items
-- Adapt agent list template loop to iterate over filtered agents instead of the complete agent collection
+- Update chat workspace message rows to occupy full width with flexible alignment and refined spacing
+- Refine chat bubble styling with compact padding, border radius, shadows, and optimized markdown paragraph handling
+- Redesign own message styling to mirror incoming message layout with right-sided avatar placement and a distinct right accent border
 
 # [0.2.3] - 2026-09-11
 

@@ -60,7 +60,10 @@
               </div>
 
               <div class="message-content">
-                <div class="bubble">
+                <div 
+                  class="bubble"
+                  [style.border-left-color]="msg.sender !== 'me' ? msg.avatarBg : null"
+                >
                   @if (msg.taskPhases && msg.taskPhases.length > 0) {
                     <div class="task-phases-container">
                       @for (phase of msg.taskPhases; track phase.phaseIndex) {
