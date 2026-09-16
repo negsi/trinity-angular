@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+# [0.2.5] - 2026-09-16
+
+### Added
+
 - Agent sorting functionality supporting three modes: recent interaction (`recent`), alphabetical by name (`name`), and creation date (`created`).
 - Sort mode toggle button in the agent list header with dynamic tooltips and icons.
 - Local storage persistence for the selected agent sort mode (`trinity_agent_sort_mode`).
@@ -356,7 +362,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.4...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.5...develop
+[0.2.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.5
 [0.2.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.4
 [0.2.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.3
 [0.2.2]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.2
