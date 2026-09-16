@@ -13,6 +13,7 @@ import { Group } from '../../models/group.model';
 import { getInitials, getAvatarColor } from '../../utils/avatar.util';
 
 export type AgentViewMode = 'single' | 'multi';
+export type AgentSortMode = 'recent' | 'name' | 'created';
 
 @Component({
   selector: 'app-agent-list',
@@ -34,6 +35,7 @@ export class AgentListComponent implements OnInit {
   private readonly VIEW_MODE_KEY = 'trinity_agent_view_mode';
   private readonly VISIBLE_GROUPS_KEY = 'trinity_visible_groups';
   private readonly COLLAPSED_GROUPS_KEY = 'trinity_collapsed_groups';
+  private readonly SORT_MODE_KEY = 'trinity_agent_sort_mode';
 
   @ViewChild('groupInput') groupInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('renameInput') renameInputRef?: ElementRef<HTMLInputElement>;
@@ -56,6 +58,7 @@ export class AgentListComponent implements OnInit {
   readonly collapsedGroupIds = signal<Set<string>>(this.getInitialCollapsedGroups());
 
   readonly viewMode = signal<AgentViewMode>(this.getInitialViewMode());
+  readonly sortMode = signal<AgentSortMode>(this.getInitialSortMode());
   readonly viewModeChange = output<AgentViewMode>();
 
   readonly agentService = inject(ApiAgentService);
@@ -73,11 +76,41 @@ export class AgentListComponent implements OnInit {
     }
   });
 
+  readonly sortedGroups = computed(() => {
+    return [...this.groupService.groups()].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
+    );
+  });
+
   // Filtering & Grouping Logic
   readonly filteredAgents = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
-    const allAgents = this.agentService.agents();
+    const allAgents = [...this.agentService.agents()];
+    const mode = this.sortMode();
+
+    allAgents.sort((a, b) => {
+      if (mode === 'name') {
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+      }
+      
+      if (mode === 'created') {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      }
+
+      if (mode === 'recent') {
+        // Sort by last interaction date descending
+        const timeA = a.last_interaction_at ? new Date(a.last_interaction_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+        const timeB = b.last_interaction_at ? new Date(b.last_interaction_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
+        return timeB - timeA;
+      }
+
+      return 0;
+    });
+
     if (!query) return allAgents;
+
     return allAgents.filter((agent) =>
       agent.name.toLowerCase().includes(query) ||
       (agent.description && agent.description.toLowerCase().includes(query))
@@ -86,8 +119,8 @@ export class AgentListComponent implements OnInit {
 
   readonly groupedViewData = computed(() => {
     const agents = this.filteredAgents();
-    const allGroups = this.groupService.groups();
-    const activeGroups = allGroups.filter((g) => this.visibleGroupIds().has(g.id));
+    // English comment: Use sortedGroups instead of un-sorted raw groups
+    const activeGroups = this.sortedGroups().filter((g) => this.visibleGroupIds().has(g.id));
     
     if (activeGroups.length === 0) {
       return { grouped: [], ungrouped: agents };
@@ -347,11 +380,24 @@ export class AgentListComponent implements OnInit {
     return new Set<string>();
   }
 
-  // English comment: Persists collapsed group IDs to localStorage
   private saveCollapsedGroups(set: Set<string>): void {
     this.collapsedGroupIds.set(new Set(set));
     localStorage.setItem(this.COLLAPSED_GROUPS_KEY, JSON.stringify(Array.from(set)));
   }
 
-  
+  private getInitialSortMode(): AgentSortMode {
+    const saved = localStorage.getItem(this.SORT_MODE_KEY);
+    return (saved === 'recent' || saved === 'name' || saved === 'created') 
+      ? (saved as AgentSortMode) 
+      : 'recent';
+  }
+
+  toggleSortMode(): void {
+    const modes: AgentSortMode[] = ['recent', 'name', 'created'];
+    const currentIndex = modes.indexOf(this.sortMode());
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    
+    this.sortMode.set(nextMode);
+    localStorage.setItem(this.SORT_MODE_KEY, nextMode);
+  }
 }

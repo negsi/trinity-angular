@@ -108,6 +108,7 @@
   }
 
   /* 1. Header */
+  /* 1. Header */
   .list-header {
     display: flex;
     align-items: center;
@@ -122,6 +123,40 @@
       gap: 6px;
       white-space: nowrap;
 
+      /* Sort Mode Button */
+      .sort-pill-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--overlay-hover, rgba(0, 0, 0, 0.04));
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        width: 40px; 
+        height: 34px;
+        padding: 0;
+        cursor: pointer;
+        color: var(--text-primary);
+        box-sizing: border-box;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:hover {
+          background-color: var(--overlay-hover, rgba(0, 0, 0, 0.08));
+          border-color: #6366f1;
+
+          mat-icon {
+            color: #6366f1;
+          }
+        }
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: var(--text-secondary);
+          transition: color 0.2s ease;
+        }
+      }
+
       /* Gruppen-Dropdown Button */
       .group-dropdown-pill {
         display: inline-flex;
@@ -130,12 +165,13 @@
         background-color: var(--overlay-hover, rgba(0, 0, 0, 0.04));
         border: 1px solid var(--border-color);
         border-radius: 8px;
-        padding: 4px 10px;
-        height: 28px;
+        padding: 0 10px;
+        height: 34px; /* Vereinheitlicht auf 34px */
         cursor: pointer;
         color: var(--text-primary);
         font-size: 0.75rem;
         font-weight: 600;
+        box-sizing: border-box;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
@@ -161,6 +197,48 @@
         font-size: 18px;
         width: 18px;
         height: 18px;
+      }
+    }
+  }
+
+  /* Single/Multi Switch Toggle */
+  .view-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--overlay-hover, rgba(0, 0, 0, 0.04));
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+    height: 34px; /* Vereinheitlicht auf 34px */
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+
+    .toggle-btn {
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0 10px;
+      height: 100%; /* Füllt die 34px inkl. Padding perfekt aus */
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        color: var(--text-primary);
+      }
+
+      &.active {
+        background-color: #6366f1;
+        color: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        font-weight: 700;
       }
     }
   }
@@ -592,7 +670,6 @@
         align-items: center;
       }
 
-      /* ANPASSUNG: MDC INNENLEBEN ZWINGEND ZURÜCKSETZEN */
       .checkbox-label-wrapper {
         display: flex;
         align-items: center;
@@ -626,7 +703,7 @@
               width: 18px !important;
               height: 18px !important;
               flex: 0 0 18px !important;
-              position: static !important; /* Aufheben der absoluten Positionierung im MDC Host */
+              position: static !important;
 
               .mdc-checkbox__native-control,
               .mdc-checkbox__background {
@@ -639,7 +716,7 @@
               }
 
               .mdc-checkbox__ripple {
-                display: none !important; /* Verhindert übergroße Klick-Bubbles */
+                display: none !important;
               }
             }
 
@@ -668,7 +745,6 @@
         }
       }
 
-      /* Zeile für Inline-Erstellung */
       &.new-item-row {
         cursor: default;
         display: flex;

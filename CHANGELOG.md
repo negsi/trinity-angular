@@ -8,7 +8,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Agent sorting functionality supporting three modes: recent interaction (`recent`), alphabetical by name (`name`), and creation date (`created`).
+- Sort mode toggle button in the agent list header with dynamic tooltips and icons.
+- Local storage persistence for the selected agent sort mode (`trinity_agent_sort_mode`).
+- `last_interaction_at` field to the `Agent` model and `touchAgentInteraction` method in `ApiAgentService` to update the interaction timestamp immediately upon sending messages.
+- Alphabetical sorting for agent groups via a new computed signal `sortedGroups`.
+- Styling for the sort button and view mode toggle bar in the agent list header.
+
 ### Changed
+
+- Group rendering in the agent list to display groups in alphabetical order rather than raw order.
+- Header button heights unified to 34px for consistent layout alignment.
 
 # [0.2.4] - 2026-09-15
 

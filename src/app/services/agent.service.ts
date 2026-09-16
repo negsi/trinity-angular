@@ -194,4 +194,21 @@ export class ApiAgentService {
       }
     });
   }
+
+  /**
+   * Updates the last interaction timestamp for an agent locally
+   * to trigger re-sorting in the UI immediately.
+   */
+  touchAgentInteraction(agentId: string): void {
+    const now = new Date().toISOString();
+    
+    this.agents.update((currentAgents) =>
+      currentAgents.map((agent) => {
+        if (agent.id === agentId) {
+          return { ...agent, last_interaction_at: now };
+        }
+        return agent;
+      })
+    );
+  }
 }
