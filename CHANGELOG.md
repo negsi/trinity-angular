@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Refactored markdown preview parsing in agent configuration to use Angular signals (`toSignal`, `computed`) instead of a component getter.
+
 # [0.2.5] - 2026-09-16
 
 ### Added

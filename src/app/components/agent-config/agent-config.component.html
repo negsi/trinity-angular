@@ -162,7 +162,7 @@
                 placeholder="Define agent persona, responsibilities, and instructions in Markdown..."
               ></textarea>
             } @else {
-              <div class="markdown-preview" [innerHTML]="parsedMarkdown"></div>
+              <div class="markdown-preview" [innerHTML]="parsedMarkdown()"></div>
             }
           </div>
         </div>
