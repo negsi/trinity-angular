@@ -54,7 +54,7 @@
               </div>
             }
 
-            @for (group of groupService.groups(); track group.id) {
+            @for (group of sortedGroups(); track group.id) {
               <div class="menu-item-row" (click)="toggleGroupVisibility(group.id)">
                 
                 @if (editingGroupId() === group.id) {
@@ -128,8 +128,30 @@
           </button>
         </div>
       </div>
+
+      <!-- Sort Mode Button -->
+      <button 
+        type="button"
+        class="sort-pill-btn"
+        (click)="toggleSortMode(); tooltip.show()"
+        #tooltip="matTooltip"
+        [matTooltip]="
+          sortMode() === 'recent' ? '▼ Name (A-Z)' :
+          sortMode() === 'name' ? '▲ Erstellungsdatum' :
+          '▲ Neueste Konversation'
+        "
+      >
+        <mat-icon>
+          {{ 
+            sortMode() === 'recent' ? 'chat' : 
+            sortMode() === 'name' ? 'abc' : 
+            'calendar_today' 
+          }}
+        </mat-icon>
+      </button>
     </div>
-    
+
+    <!-- Einklapp-Button -->
     <button 
       mat-mini-fab 
       color="primary" 

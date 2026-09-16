@@ -36,6 +36,7 @@ export interface Agent {
   memory_mode: 'user_only' | 'all';
   memory_limit_type: 'all' | 'message_count';
   memory_message_count?: number | null;
+  last_interaction_at?: string | number;
 }
 
 /**

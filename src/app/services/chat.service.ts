@@ -1,9 +1,10 @@
-import { Injectable, inject, signal, Signal, computed } from '@angular/core';
+import { Injectable, inject, signal, Signal, computed, Injector } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Message, SendMessageDto, TaskPhase } from '../models/message.model';
 import { ConversationUI } from '../models/conversation.model';
 import { SseDecoder } from '../utils/sse-decoder.util';
+import { ApiAgentService } from './agent.service';
 
 export interface ConversationFile {
   id: string;
@@ -24,6 +25,7 @@ export interface ConversationFile {
 })
 export class ApiChatService {
   private readonly http = inject(HttpClient);
+  private readonly injector = inject(Injector);
   private readonly agentsUrl = '/api/v1/agents';
 
   /** Map holding active AbortControllers isolated per agent ID */
@@ -160,6 +162,9 @@ export class ApiChatService {
       console.error('Missing agent_id (recipient_id) in sendMessage payload.');
       return;
     }
+
+    const agentService = this.injector.get(ApiAgentService);
+    agentService.touchAgentInteraction(agentId);
 
     let activeConvId = dto.conversation_id || '';
 
