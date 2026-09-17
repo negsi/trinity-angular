@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-### Changed
+- Visual streaming indicators and styling to agent list items to show active generation status.
 
-- Refactored markdown preview parsing in agent configuration to use Angular signals (`toSignal`, `computed`) instead of a component getter.
+### Changed
 
 # [0.2.5] - 2026-09-16
 

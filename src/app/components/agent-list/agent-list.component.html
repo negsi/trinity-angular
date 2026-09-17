@@ -242,6 +242,7 @@
     class="agent-item" 
     [class.selected]="viewMode() === 'single' ? agentService.selectedAgent()?.id === agent.id : isCrewSelected(agent.id)"
     [class.disabled]="viewMode() === 'multi' && !isCrewSelected(agent.id) && agentService.selectedCrewAgents().length >= 4"
+    [class.is-streaming]="isAgentStreaming(agent.id)"
     (click)="onAgentClick(agent)"
     [title]="isCollapsed() ? agent.name : ''"
   >
@@ -250,7 +251,13 @@
       [style.background-color]="getAvatarBg(agent.name)"
     >
       {{ getInitials(agent.name) }}
-      @if (viewMode() === 'multi' && isCrewSelected(agent.id)) {
+      
+      @if (isAgentStreaming(agent.id)) {
+        <!-- Streaming-Badge (z.B. pulsierender Punkt oder Sparkle-Icon) -->
+        <span class="streaming-indicator" title="Generiert Antwort...">
+          <mat-icon class="spinning-icon">auto_awesome</mat-icon>
+        </span>
+      } @else if (viewMode() === 'multi' && isCrewSelected(agent.id)) {
         <span class="crew-badge-check">
           <mat-icon>check</mat-icon>
         </span>
@@ -262,6 +269,9 @@
     <div class="agent-details">
       <div class="agent-top">
         <span class="agent-name">{{ agent.name }}</span>
+        @if (isAgentStreaming(agent.id)) {
+          <span class="streaming-label">schreibt...</span>
+        }
       </div>
       <p class="agent-desc">
         {{ agent.description || 'Keine Beschreibung hinterlegt' }}
