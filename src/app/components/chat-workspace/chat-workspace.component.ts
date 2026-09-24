@@ -82,6 +82,9 @@ export class ChatWorkspaceComponent {
   // Smart Auto-Scroll State Signal
   readonly userHasScrolledUp = signal<boolean>(false);
 
+  // Toggle Thought Accordion (default false for history/reload)
+  readonly showThoughts = signal<boolean>(false);
+
   // Active Agent computation (Override vs Global Selection)
   readonly activeAgent = computed<Agent | null>(() => this.overrideAgent() ?? this.agentService.selectedAgent());
 
@@ -128,6 +131,8 @@ export class ChatWorkspaceComponent {
         avatarBg: getAvatarColor(msg.sender_name),
         avatarInitials: getInitials(msg.sender_name),
         text: msg.text,
+        thoughts: msg.thoughts,
+        timeline: msg.timeline ?? [],
         time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isRead: true,
         attachments: msg.attachments ?? [],
@@ -166,6 +171,9 @@ export class ChatWorkspaceComponent {
           this.conversationsList.set(convs);
           const currentAgent = this.activeAgent();
 
+          // Reset thought accordion when switching agents
+          this.showThoughts.set(false);
+
           if (currentAgent && this.chatService.draftAgentId === currentAgent.id) {
             this.activeConversationId.set(null);
             this.chatService.clearMessages(currentAgent.id);
@@ -176,7 +184,6 @@ export class ChatWorkspaceComponent {
             const latestConv = convs[0];
             this.activeConversationId.set(latestConv.id);
             
-            // Laden wir Nachrichten nur, wenn für den Agenten nicht gerade bereits lokal gestreamt/gearbeitet wird
             const isStreaming = this.chatService.isAgentStreaming(currentAgent.id)();
             const existingMsgs = this.chatService.getMessagesSignal(currentAgent.id)();
             
@@ -197,6 +204,7 @@ export class ChatWorkspaceComponent {
           }
         }
       });
+      
     // Native Zoneless Auto-Scroll
     effect(() => {
       const groups = this.messageGroups();
@@ -267,6 +275,7 @@ export class ChatWorkspaceComponent {
     }
 
     this.userHasScrolledUp.set(false);
+    this.showThoughts.set(false); // Ensure accordion is closed when switching conversation
     this.activeConversationId.set(conversationId);
     this.chatService.loadMessages(currentAgent.id, conversationId);
     this.isDrawerOpen.set(false);
@@ -280,6 +289,7 @@ export class ChatWorkspaceComponent {
     }
 
     this.userHasScrolledUp.set(false);
+    this.showThoughts.set(false);
     this.activeConversationId.set(null);
     this.isDrawerOpen.set(false);
 
@@ -309,6 +319,10 @@ export class ChatWorkspaceComponent {
 
   toggleExpand(): void {
     this.isExpanded.update((v) => !v);
+  }
+
+  toggleThoughts(): void {
+    this.showThoughts.update((v) => !v);
   }
 
   onKeyDown(event: KeyboardEvent): void {
@@ -352,6 +366,8 @@ export class ChatWorkspaceComponent {
       recipient_id: currentAgent.id
     };
 
+    // Open thoughts accordion by default for active prompt streaming
+    this.showThoughts.set(true);
     this.userHasScrolledUp.set(false);
     this.currentInput.set('');
     this.selectedFiles.set([]);
@@ -407,6 +423,8 @@ export class ChatWorkspaceComponent {
       recipient_id: currentAgent.id
     };
 
+    // Open thoughts accordion by default for active prompt streaming
+    this.showThoughts.set(true);
     this.userHasScrolledUp.set(false);
     void this.chatService.sendMessage(payload, currentAgent.name, []);
   }
@@ -446,11 +464,9 @@ export class ChatWorkspaceComponent {
     const convId = this.activeConversationId();
     if (!currentAgent || !messageId) return;
 
-    // 1. Nachrichten-ID aus dem aktuellen Signal ermitteln
     const currentMsgs = this.chatService.getMessagesSignal(currentAgent.id)();
     const targetMsg = currentMsgs.find(m => m.id === messageId);
 
-    // Falls aus irgendeinem Grund keine ConvId da ist, versuchen wir sie aus der Nachricht zu ziehen
     const effectiveConvId = convId || targetMsg?.conversation_id;
 
     if (!effectiveConvId) {
@@ -458,17 +474,14 @@ export class ChatWorkspaceComponent {
       return;
     }
 
-    // 2. Optimistisches UI-Update (Nachricht sofort aus dem Template ausblenden)
     this.chatService.setMessages(
       currentAgent.id,
       currentMsgs.filter((m) => m.id !== messageId)
     );
 
-    // 3. Backend-Call durchführen
     this.chatService.deleteMessage(currentAgent.id, effectiveConvId, messageId).subscribe({
       error: (err: unknown) => {
         console.error('Failed to delete message on backend, rolling back:', err);
-        // Fallback: Bei Fehler im Backend die Nachricht wieder im UI herstellen
         this.chatService.setMessages(currentAgent.id, currentMsgs);
       }
     });
@@ -479,6 +492,7 @@ export class ChatWorkspaceComponent {
     const convId = this.activeConversationId();
     if (!currentAgent || !convId) return;
 
+    this.showThoughts.set(false);
     this.chatService.clearConversationMessages(currentAgent.id, convId).subscribe({
       next: () => {
         this.chatService.clearMessages(currentAgent.id);

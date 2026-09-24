@@ -1,7 +1,8 @@
+// Comments in English as requested
 import { Injectable, inject, signal, Signal, computed, Injector } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Message, SendMessageDto, TaskPhase } from '../models/message.model';
+import { Message, SendMessageDto, TaskPhase, ThoughtTimelineBlock } from '../models/message.model';
 import { ConversationUI } from '../models/conversation.model';
 import { SseDecoder } from '../utils/sse-decoder.util';
 import { ApiAgentService } from './agent.service';
@@ -102,7 +103,8 @@ export class ApiChatService {
       )
       .subscribe({
         next: (data: Message[]) => {
-          this.setMessages(agentId, data);
+          const formattedData = this.formatMessages(data);
+          this.setMessages(agentId, formattedData);
           this.isLoading.set(false);
         },
         error: (err: unknown) => {
@@ -113,10 +115,6 @@ export class ApiChatService {
       });
   }
 
-  /**
-   * Silently reloads conversation history in the background to swap temporary
-   * streaming IDs with real database UUIDs without triggering global UI loading spinners.
-   */
   private silentReloadMessages(agentId: string, conversationId: string): void {
     this.http
       .get<Message[]>(
@@ -125,13 +123,130 @@ export class ApiChatService {
       .subscribe({
         next: (data: Message[]) => {
           if (data && data.length > 0) {
-            this.setMessages(agentId, data);
+            const formattedData = this.formatMessages(data);
+            this.setMessages(agentId, formattedData);
           }
         },
         error: (err: unknown) => {
           console.error('Failed to silently reload messages:', err);
         }
       });
+  }
+
+  /**
+   * Formats raw backend messages, extracts embedded thoughts from step results,
+   * cleans up duplicated thought content, and structures the timeline chronologically.
+   */
+  private formatMessages(data: Message[]): Message[] {
+    return data.map((msg) => {
+      const normalizedThoughts = typeof msg.thoughts === 'string' ? msg.thoughts : undefined;
+      let rawTimeline: ThoughtTimelineBlock[] = msg.timeline || [];
+
+      // Fallback for empty timelines
+      if (rawTimeline.length === 0) {
+        if (msg.taskPhases && msg.taskPhases.length > 0) {
+          if (normalizedThoughts) {
+            rawTimeline.push({ type: 'thought', content: normalizedThoughts });
+          }
+          msg.taskPhases.forEach((phase) => {
+            rawTimeline.push({ type: 'phase', phase });
+          });
+        } else if (normalizedThoughts) {
+          rawTimeline.push({ type: 'thought', content: normalizedThoughts });
+        }
+      }
+
+      // 1. Extract embedded thoughts from steps
+      const extractedStepThoughts: string[] = [];
+
+      rawTimeline.forEach((block) => {
+        if (block.type === 'phase' && block.phase) {
+          block.phase.steps.forEach((step) => {
+            if (typeof step.result === 'string' && step.result.includes('__THOUGHT__:')) {
+              const match = step.result.match(/__THOUGHT__:\s*(\{.*?\})/s);
+              if (match) {
+                try {
+                  const thoughtData = JSON.parse(match[1]);
+                  if (thoughtData.content) {
+                    extractedStepThoughts.push(thoughtData.content.trim());
+                  }
+                } catch (e) {
+                  console.error('Error parsing embedded step thought:', e);
+                }
+              }
+            }
+          });
+        }
+      });
+
+      // 2. Build processed timeline and trim duplicate entries from earlier thought blocks
+      const processedTimeline: ThoughtTimelineBlock[] = [];
+
+      for (const block of rawTimeline) {
+        if (block.type === 'thought' && block.content) {
+          let cleanedContent = block.content;
+
+          extractedStepThoughts.forEach((stepThought) => {
+            if (cleanedContent.includes(stepThought)) {
+              cleanedContent = cleanedContent.replace(stepThought, '').trim();
+            }
+          });
+
+          if (cleanedContent) {
+            processedTimeline.push({
+              type: 'thought',
+              content: cleanedContent
+            });
+          }
+        } else if (block.type === 'phase' && block.phase) {
+          const thoughtsAfterThisPhase: string[] = [];
+
+          const cleanedSteps = block.phase.steps.map((step) => {
+            if (typeof step.result === 'string' && step.result.includes('__THOUGHT__:')) {
+              const match = step.result.match(/__THOUGHT__:\s*(\{.*?\})/s);
+              if (match) {
+                try {
+                  const thoughtData = JSON.parse(match[1]);
+                  if (thoughtData.content) {
+                    thoughtsAfterThisPhase.push(thoughtData.content.trim());
+                  }
+                } catch (e) {
+                  // Ignore parse errors
+                }
+              }
+
+              return {
+                ...step,
+                result: SseDecoder.cleanStepResult(step.result)
+              };
+            }
+            return step;
+          });
+
+          // Insert phase
+          processedTimeline.push({
+            ...block,
+            phase: { ...block.phase, steps: cleanedSteps }
+          });
+
+          // Insert thoughts created during/after this phase directly beneath
+          thoughtsAfterThisPhase.forEach((thoughtContent) => {
+            processedTimeline.push({
+              type: 'thought',
+              content: thoughtContent
+            });
+          });
+        } else {
+          processedTimeline.push(block);
+        }
+      }
+
+      return {
+        ...msg,
+        thoughts: normalizedThoughts,
+        timeline: processedTimeline
+      };
+    });
   }
 
   cancelActiveStream(agentId: string): void {
@@ -202,7 +317,8 @@ export class ApiChatService {
       recipient_id: dto.sender_id || 'user',
       timestamp: new Date().toISOString(),
       attachments: [],
-      taskPhases: []
+      taskPhases: [],
+      timeline: []
     };
 
     const currentAgentMsgs = this.messagesMap()[agentId] ?? [];
@@ -330,42 +446,104 @@ export class ApiChatService {
         );
         break;
 
+      case 'thought': {
+        const rawChunk = event.content || event.thought || '';
+        if (!rawChunk) break;
+
+        this.updateAgentMessages(agentId, (prev) =>
+          prev.map((m) => {
+            if (m.id !== messageId) return m;
+
+            const timeline = [...(m.timeline || [])];
+            const lastBlock = timeline[timeline.length - 1];
+
+            if (!lastBlock || lastBlock.type !== 'thought') {
+              timeline.push({ type: 'thought', content: rawChunk });
+            } else {
+              timeline[timeline.length - 1] = {
+                ...lastBlock,
+                content: lastBlock.content + rawChunk
+              };
+            }
+
+            const updatedThoughts = (m.thoughts || '') + rawChunk;
+
+            return { ...m, thoughts: updatedThoughts, timeline };
+          })
+        );
+        break;
+      }
+
       case 'task_chain_init':
         this.updateAgentMessages(agentId, (prev) =>
           prev.map((m) => {
             if (m.id !== messageId) return m;
+
             const currentPhases = m.taskPhases || [];
             const newPhase: TaskPhase = {
               phaseIndex: currentPhases.length + 1,
+              callDepth: event.callDepth ?? 0,
               steps: event.steps
             };
-            return { ...m, taskPhases: [...currentPhases, newPhase] };
+
+            const timeline = [...(m.timeline || [])];
+
+            timeline.push({ type: 'phase', phase: newPhase });
+
+            return {
+              ...m,
+              taskPhases: [...currentPhases, newPhase],
+              timeline
+            };
           })
         );
         break;
 
       case 'task_step_update':
         this.updateAgentMessages(agentId, (prev) =>
-          prev.map((m) =>
-            m.id === messageId
-              ? {
-                  ...m,
-                  taskPhases: SseDecoder.applyTaskStepUpdate(
-                    m.taskPhases || [],
-                    event.stepNumber,
-                    event.status
-                  )
-                }
-              : m
-          )
+          prev.map((m) => {
+            if (m.id !== messageId) return m;
+
+            const updatedPhases = SseDecoder.applyTaskStepUpdate(
+              m.taskPhases || [],
+              event.stepNumber,
+              event.status,
+              event.callDepth ?? 0,
+              event.result
+            );
+
+            const updatedTimeline = (m.timeline || []).map((block) => {
+              if (block.type !== 'phase') return block;
+              const [updatedPhase] = SseDecoder.applyTaskStepUpdate(
+                [block.phase],
+                event.stepNumber,
+                event.status,
+                event.callDepth ?? 0,
+                event.result
+              );
+              return { ...block, phase: updatedPhase };
+            });
+
+            return { ...m, taskPhases: updatedPhases, timeline: updatedTimeline };
+          })
         );
         break;
 
-      case 'text_chunk':
-        this.updateAgentMessages(agentId, (prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, text: m.text + event.text } : m))
-        );
+      case 'text_chunk': {
+        if (!event.text) break;
+
+        let cleanText = event.text;
+        if (cleanText.includes('TASK_CHAIN:')) {
+          cleanText = cleanText.replace(/(?:__)?TASK_CHAIN(?:__)?:\s*\{.*?\}/gs, '').trim();
+        }
+
+        if (cleanText) {
+          this.updateAgentMessages(agentId, (prev) =>
+            prev.map((m) => (m.id === messageId ? { ...m, text: m.text + cleanText } : m))
+          );
+        }
         break;
+      }
 
       case 'done':
         break;

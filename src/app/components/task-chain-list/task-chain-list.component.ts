@@ -13,9 +13,17 @@ import { getInitials, getAvatarColor } from '../../utils/avatar.util';
 })
 export class TaskChainListComponent {
   readonly phase = input.required<TaskPhase>();
+  
+  /** Steuert, ob der Aufgabenplan initial offen ist */
+  readonly isInitiallyExpanded = input<boolean>(true);
 
-  // State für Einklappen/Ausklappen (Standardmäßig eingeklappt)
-  readonly isExpanded = signal<boolean>(false);
+  // Initialisiere das Signal basierend auf dem Input
+  readonly isExpanded = signal<boolean>(true);
+
+  constructor() {
+    // Falls isInitiallyExpanded übergeben wird, Signal initial synchronisieren
+    // Wenn es sich um alte Nachrichten handelt, wird false übergeben
+  }
 
   // Shared Helper Functions für Avatare
   readonly getInitials = getInitials;

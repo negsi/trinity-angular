@@ -64,15 +64,39 @@
                   class="bubble"
                   [style.border-left-color]="msg.sender !== 'me' ? msg.avatarBg : null"
                 >
-                  @if (msg.taskPhases && msg.taskPhases.length > 0) {
-                    <div class="task-phases-container">
-                      @for (phase of msg.taskPhases; track phase.phaseIndex) {
-                        <app-task-chain-list [phase]="phase"></app-task-chain-list>
+                  <!-- Timeline representation (Interleaved Thoughts & Task Chains) -->
+                  @if ((msg.timeline && msg.timeline.length > 0) || msg.thoughts || (msg.taskPhases && msg.taskPhases.length > 0)) {
+                    <div class="task-chain-card">
+                      <div class="task-chain-header" (click)="toggleThoughts()">
+                        <div class="header-title">
+                          <mat-icon>psychology</mat-icon>
+                          <span>{{ isCurrentAgentStreaming() ? 'Denkprozess & Ablaufplan...' : 'Denkprozess & Ablaufplan' }}</span>
+                        </div>
+                        <mat-icon>{{ showThoughts() ? 'expand_less' : 'expand_more' }}</mat-icon>
+                      </div>
+
+                      @if (showThoughts()) {
+                        @if (msg.timeline && msg.timeline.length > 0) {
+                          <div class="timeline-container">
+                            @for (block of msg.timeline; track $index) {
+                              @if (block.type === 'thought' && block.content) {
+                                <div class="thought-content">
+                                  <markdown [data]="block.content"></markdown>
+                                </div>
+                              } @else if (block.type === 'phase') {
+                                <app-task-chain-list 
+                                  [phase]="block.phase" 
+                                  [isInitiallyExpanded]="showThoughts()"
+                                ></app-task-chain-list>
+                              }
+                            }
+                          </div>
+                        }
                       }
                     </div>
                   }
 
-                  @if (isCurrentAgentStreaming() && !msg.text && (!msg.taskPhases || msg.taskPhases.length === 0)) {
+                  @if (isCurrentAgentStreaming() && !msg.text && (!msg.taskPhases || msg.taskPhases.length === 0) && !msg.thoughts && (!msg.timeline || msg.timeline.length === 0)) {
                     <div class="typing-dots">
                       <span class="dot"></span>
                       <span class="dot"></span>

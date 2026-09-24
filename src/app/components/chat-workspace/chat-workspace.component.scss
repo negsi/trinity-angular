@@ -12,6 +12,20 @@
   --input-border: #1e293b;
   --divider-line: rgba(255, 255, 255, 0.08);
 
+  /* Task-Chain & Thought Dynamic Tokens (Dark Mode Default) */
+  --tc-bg: #1e293b;
+  --tc-border: #334155;
+  --tc-header-bg: #0f172a;
+  --tc-header-text: #f8fafc;
+  --tc-header-title: #60a5fa;
+  --tc-thought-bg: #111827;
+  --tc-thought-text: #cbd5e1;
+  --tc-phase-title: #f8fafc;
+  --tc-phase-progress: #94a3b8;
+  --tc-item-bg: rgba(255, 255, 255, 0.03);
+  --tc-badge-bg: #334155;
+  --tc-badge-text: #cbd5e1;
+
   &.is-fullscreen {
     position: fixed !important;
     top: 0;
@@ -41,6 +55,20 @@
     --input-bg: #ffffff;
     --input-border: #e2e8f0;
     --divider-line: rgba(0, 0, 0, 0.08);
+
+    /* Task-Chain & Thought Dynamic Tokens (Light Mode Output) */
+    --tc-bg: #f1f5f9;
+    --tc-border: #cbd5e1;
+    --tc-header-bg: #e2e8f0;
+    --tc-header-text: #0f172a;
+    --tc-header-title: #2563eb;
+    --tc-thought-bg: #ffffff;
+    --tc-thought-text: #334155;
+    --tc-phase-title: #0f172a;
+    --tc-phase-progress: #475569; /* Dunkleres Grau für klaren Kontrast im Light Mode */
+    --tc-item-bg: rgba(0, 0, 0, 0.03);
+    --tc-badge-bg: #cbd5e1;
+    --tc-badge-text: #0f172a;
   }
 
   position: relative;
@@ -181,7 +209,6 @@
         min-width: 0;
 
         .bubble {
-          /* Kompaktes Padding: 8px oben/unten, 14px links/rechts */
           padding: 8px 14px;
           border-radius: 12px;
           font-size: 0.92rem;
@@ -369,7 +396,7 @@
         }
       }
 
-      /* Eigene Nachrichten: Avatar rechts, gleicher BG, moderner Accent-Border rechts */
+      /* Eigene Nachrichten */
       &.me {
         flex-direction: row-reverse;
 
@@ -386,8 +413,8 @@
             background-color: var(--bubble-other-bg);
             color: var(--bubble-other-text);
             border: 1px solid var(--border-color);
-            border-left: 1px solid var(--border-color); /* Linke Akzent-Border von Fremdnachrichten überschreiben */
-            border-right: 3px solid var(--bubble-me-bg, #3b82f6); /* Subtiler Accent-Border rechts */
+            border-left: 1px solid var(--border-color);
+            border-right: 3px solid var(--bubble-me-bg, #3b82f6);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
             ::ng-deep a,
@@ -752,154 +779,224 @@
   }
 }
 
+/* ==========================================================================
+   TASK CHAIN & THOUGHT CONTAINER STYLES
+   ========================================================================== */
 .task-chain-card {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--border-color);
+  margin-bottom: 1rem;
   border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
+  background-color: var(--tc-bg);
+  border: 1px solid var(--tc-border);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   .task-chain-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
+    justify-content: space-between;
+    padding: 0.75rem 1.15rem;
+    background-color: var(--tc-header-bg);
+    border-bottom: 1px solid var(--tc-border);
+    cursor: pointer;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-sub);
-    margin-bottom: 8px;
+    color: var(--tc-header-text);
+    user-select: none;
 
-    .chain-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-      color: var(--bubble-me-bg);
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--tc-header-title);
+      font-weight: 700;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
     }
   }
 
-  .task-chain-list {
+  .timeline-container {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
+    gap: 0.75rem; /* Sorgt für gleichmäßigen Abstand zwischen ALLEN Elementen in der Schleife */
 
-    .task-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.82rem;
+    /* Jeder einzelne Gedanken-Block */
+    .thought-content {
+      padding: 0.25rem 0.25rem;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--tc-thought-text);
+      word-break: break-word;
 
-      .status-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      ::ng-deep markdown {
+        p {
+          margin: 0 0 0.5rem 0;
 
-        mat-icon {
-          font-size: 16px;
-          width: 16px;
-          height: 16px;
-
-          &.icon-success {
-            color: #10b981;
+          &:last-child {
+            margin-bottom: 0;
           }
-          &.icon-pending {
-            color: var(--text-sub);
-            opacity: 0.5;
+        }
+
+        h1, h2, h3, h4 {
+          color: var(--text-main);
+          font-weight: 700;
+          font-size: 0.9rem;
+          margin: 0.8rem 0 0.4rem 0;
+          display: block;
+
+          &:first-child {
+            margin-top: 0;
           }
-          &.icon-failed {
-            color: #ef4444;
+        }
+
+        code {
+          background-color: var(--tc-badge-bg);
+          color: var(--tc-badge-text);
+          padding: 2px 5px;
+          border-radius: 4px;
+          font-size: 0.82rem;
+        }
+      }
+    }
+
+    /* Jeder einzelne Phasen-Block */
+    app-task-chain-list {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+
+      ::ng-deep .phase-container {
+        padding: 0.6rem 0.9rem;
+        background-color: var(--tc-header-bg);
+        border: 1px solid var(--tc-border);
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+        .phase-header {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: var(--tc-phase-title);
+          margin-bottom: 0;
+
+          &.has-items {
+            margin-bottom: 0.5rem;
           }
-          &.icon-spinner {
-            color: var(--bubble-me-bg);
-            animation: spin 1.2s linear infinite;
+
+          .phase-progress {
+            font-weight: 600;
+            color: var(--tc-phase-progress);
+            font-size: 0.78rem;
           }
         }
       }
-
-      .task-desc {
-        flex: 1;
-        color: var(--text-main);
-      }
-
-      &.pending .task-desc {
-        color: var(--text-sub);
-      }
-
-      .task-tool-badge {
-        font-size: 0.68rem;
-        background: rgba(255, 255, 255, 0.08);
-        padding: 2px 6px;
-        border-radius: 4px;
-        color: var(--text-sub);
-        font-family: monospace;
-      }
     }
   }
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.task-item.is-delegation {
-  background: rgba(var(--sys-primary-rgb, 99, 102, 241), 0.05);
-  border-left: 3px solid var(--sys-primary, #6366f1);
+.task-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 12px;
   border-radius: 6px;
-  margin: 4px 0;
+  background-color: var(--tc-item-bg);
+  margin-bottom: 6px;
+  border: 1px solid var(--tc-border);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .task-main-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    .task-desc {
+      font-size: 0.88rem;
+      color: var(--tc-phase-title);
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .task-tool-badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background-color: var(--tc-badge-bg);
+      color: var(--tc-badge-text);
+      font-family: monospace;
+      font-weight: 600;
+
+      &.agent-badge {
+        background-color: #3b82f6;
+        color: #ffffff;
+      }
+    }
+  }
+
+  &.is-delegation {
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid #3b82f6;
+  }
 }
 
 .subagent-delegation-box {
   margin-top: 6px;
   font-size: 0.85rem;
-  background: rgba(0, 0, 0, 0.03);
-  padding: 6px 10px;
-  border-radius: 4px;
+  background: var(--tc-thought-bg);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--tc-border);
 
   .delegation-header {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--tc-phase-title);
 
     mat-icon {
       font-size: 16px;
       width: 16px;
       height: 16px;
+      color: var(--tc-header-title);
     }
 
     code {
       font-size: 0.8rem;
-      background: rgba(0, 0, 0, 0.06);
-      padding: 1px 4px;
-      border-radius: 3px;
+      background: var(--tc-badge-bg);
+      color: var(--tc-badge-text);
+      padding: 2px 6px;
+      border-radius: 4px;
     }
   }
 
   .delegation-msg-preview {
-    margin-top: 4px;
+    margin-top: 6px;
     font-style: italic;
-    opacity: 0.85;
+    color: var(--tc-thought-text);
+    line-height: 1.4;
   }
-}
-
-.task-tool-badge.agent-badge {
-  background-color: var(--sys-primary, #6366f1);
-  color: #fff;
-}
-
-.task-chain-card.is-nested {
-  margin-top: 8px;
-  margin-left: 12px;
-  border-left: 2px solid var(--sys-color-primary, #6750a4);
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 4px;
 }
 
 .nested-chain-wrapper {
   margin-top: 8px;
   width: 100%;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 textarea:disabled {

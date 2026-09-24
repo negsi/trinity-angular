@@ -83,7 +83,10 @@
             <!-- Rekursiver Aufruf für verschachtelte Task-Chains des Sub-Agenten -->
             @if (task.subTaskChain) {
               <div class="nested-chain-wrapper">
-                <app-task-chain-list [phase]="task.subTaskChain"></app-task-chain-list>
+                <app-task-chain-list 
+                  [phase]="task.subTaskChain"
+                  [isInitiallyExpanded]="isExpanded()"
+                ></app-task-chain-list>
               </div>
             }
           </div>
