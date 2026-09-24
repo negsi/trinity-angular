@@ -1,3 +1,4 @@
+// Comments in English as requested
 import { TaskItem } from './task-chain.model';
 
 export type ActorType = 'user' | 'agent' | 'system';
@@ -19,6 +20,10 @@ export interface TaskPhase {
   steps: TaskItem[];
 }
 
+export type ThoughtTimelineBlock = 
+  | { type: 'thought'; content: string }
+  | { type: 'phase'; phase: TaskPhase };
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -26,10 +31,12 @@ export interface Message {
   sender_type: ActorType;
   sender_name: string;
   text: string;
+  thoughts?: string;
   recipient_id?: string | null;
   timestamp: string;
   attachments?: MessageAttachment[];
   taskPhases?: TaskPhase[];
+  timeline?: ThoughtTimelineBlock[];
 }
 
 export interface SendMessageDto {
@@ -48,10 +55,12 @@ export interface ChatMessageUI {
   avatarBg: string;
   avatarInitials: string;
   text: string;
+  thoughts?: string;
   time: string;
   isRead?: boolean;
   attachments: MessageAttachment[];
   taskPhases: TaskPhase[];
+  timeline?: ThoughtTimelineBlock[];
 }
 
 export interface MessageGroup {

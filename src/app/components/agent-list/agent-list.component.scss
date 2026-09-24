@@ -868,3 +868,70 @@
     }
   }
 }
+
+.agent-item {
+  position: relative;
+  transition: all 0.25s ease-in-out;
+
+  /* Optische Hervorhebung während des Streamings */
+  &.is-streaming {
+    border-left: 3px solid #7c4dff; // Akzentfarbe (z. B. Gemini-Purple)
+    background: rgba(124, 77, 255, 0.08);
+    box-shadow: 0 0 12px rgba(124, 77, 255, 0.15);
+
+    .agent-name {
+      color: #7c4dff;
+      font-weight: 600;
+    }
+  }
+}
+
+/* Subtiles "schreibt..." Label oben rechts im Item */
+.streaming-label {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #7c4dff;
+  animation: pulse-text 1.5s infinite ease-in-out;
+}
+
+/* Pulsierendes Badge über dem Avatar */
+.streaming-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #7c4dff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px rgba(124, 77, 255, 0.6);
+
+  .spinning-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+    animation: spin 2s linear infinite;
+  }
+}
+
+/* Keyframes für Animationen */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-text {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

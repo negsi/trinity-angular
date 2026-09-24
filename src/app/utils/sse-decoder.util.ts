@@ -1,17 +1,20 @@
+// Comments in English as requested
 import { MessageAttachment, TaskPhase } from '../models/message.model';
 import { TaskItem, TaskStatus } from '../models/task-chain.model';
+
 
 export type SseParsedEvent =
   | { type: 'meta'; conversationId: string }
   | { type: 'attachments'; attachments: MessageAttachment[] }
   | { type: 'task_chain_init'; steps: TaskItem[]; callDepth?: number; agentId?: string }
   | { type: 'task_step_update'; stepNumber: number; status: TaskStatus; result?: string; callDepth?: number }
+  | { type: 'thought'; thought: string; content?: string } 
   | { type: 'text_chunk'; text: string }
   | { type: 'done' };
 
 export class SseDecoder {
   /**
-   * Extrahiert SSE data-Payloads aus einem Raw-Block.
+   * Extracts SSE data payloads from a raw block.
    */
   static extractDataPayload(rawEvent: string): string | null {
     const lines = rawEvent.split('\n');
@@ -35,44 +38,33 @@ export class SseDecoder {
   }
 
   /**
-   * Parst den extrahierten Dateninhalt in ein typisiertes Domänen-Event.
+   * Helper to match both raw ("__KEY__:") and markdown-stripped ("KEY:") prefixes.
    */
-  static parseEvent(content: string): SseParsedEvent {
-    if (content === '[DONE]') {
-      return { type: 'done' };
-    }
+  private static findPrefixIndex(str: string, key: string): { index: number; length: number } | null {
+    const rawPrefix = `__${key}__:`;
+    const plainPrefix = `${key}:`;
 
-    // 1. Meta-Event Detection
-    if (content.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(content);
-        if (parsed.type === 'meta' && parsed.data?.conversation_id) {
-          return { type: 'meta', conversationId: parsed.data.conversation_id };
-        }
-      } catch {
-        // Weitermachen falls kein valides JSON
-      }
-    }
+    const rawIdx = str.indexOf(rawPrefix);
+    if (rawIdx !== -1) return { index: rawIdx, length: rawPrefix.length };
 
-    // 2. Attachments Event
-    if (content.includes('__ATTACHMENTS__:')) {
-      const jsonStart = content.indexOf('__ATTACHMENTS__:') + '__ATTACHMENTS__:'.length;
-      try {
-        const payload = JSON.parse(content.substring(jsonStart).trim());
-        if (payload.type === 'attachments' && Array.isArray(payload.files)) {
-          return { type: 'attachments', attachments: payload.files };
-        }
-      } catch (err) {
-        console.error('Failed to parse SSE attachments:', err);
-      }
-    }
+    const plainIdx = str.indexOf(plainPrefix);
+    if (plainIdx !== -1) return { index: plainIdx, length: plainPrefix.length };
 
-    // 3. Task Chain Events
-    // 3. Task Chain Events
-    if (content.includes('__TASK_CHAIN__:')) {
-      const jsonStart = content.indexOf('__TASK_CHAIN__:') + '__TASK_CHAIN__:'.length;
+    return null;
+  }
+
+  /**
+   * Inspects a plain text string for embedded custom protocol payloads (__TASK_CHAIN__, __THOUGHT__, etc.)
+   */
+  private static parseSpecialStringPayload(str: string): SseParsedEvent | null {
+    // 1. Task Chain Events
+    const taskChainMatch = SseDecoder.findPrefixIndex(str, 'TASK_CHAIN');
+    if (taskChainMatch) {
+      const jsonStart = taskChainMatch.index + taskChainMatch.length;
       try {
-        const payload = JSON.parse(content.substring(jsonStart).trim());
+        const jsonStr = str.substring(jsonStart).trim();
+        const payload = JSON.parse(jsonStr);
+
         if (payload.type === 'task_chain_init' && Array.isArray(payload.steps)) {
           const normalizedSteps: TaskItem[] = payload.steps.map((s: Record<string, unknown>) => ({
             step_number: (s['step_number'] ?? s['step']) as number,
@@ -89,6 +81,7 @@ export class SseDecoder {
             agentId: payload.agent_id
           };
         }
+
         if (payload.type === 'task_step_update') {
           return {
             type: 'task_step_update',
@@ -99,15 +92,108 @@ export class SseDecoder {
           };
         }
       } catch (err) {
-        console.error('Failed to parse SSE task chain:', err);
+        console.error('Failed to parse embedded SSE task chain JSON:', err, str);
       }
+
+      // Suppress outputting raw protocol string to chat UI text
+      return { type: 'text_chunk', text: '' };
+    }
+
+    // 2. Attachments Event
+    const attachmentsMatch = SseDecoder.findPrefixIndex(str, 'ATTACHMENTS');
+    if (attachmentsMatch) {
+      const jsonStart = attachmentsMatch.index + attachmentsMatch.length;
+      try {
+        const payload = JSON.parse(str.substring(jsonStart).trim());
+        if (payload.type === 'attachments' && Array.isArray(payload.files)) {
+          return { type: 'attachments', attachments: payload.files };
+        }
+      } catch (err) {
+        console.error('Failed to parse SSE attachments:', err);
+      }
+      return { type: 'text_chunk', text: '' };
+    }
+
+    // 3. Thought Event Detection
+    const thoughtMatch = SseDecoder.findPrefixIndex(str, 'THOUGHT');
+    if (thoughtMatch) {
+      const jsonStart = thoughtMatch.index + thoughtMatch.length;
+      try {
+        const payload = JSON.parse(str.substring(jsonStart).trim());
+        return { type: 'thought', thought: payload.delta || payload.content || payload.thought || payload.text || '' };
+      } catch {
+        return { type: 'thought', thought: str.substring(jsonStart).trim() };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Parses the extracted data content into a typed domain event.
+   */
+  static parseEvent(content: string): SseParsedEvent {
+    if (content === '[DONE]') {
+      return { type: 'done' };
+    }
+
+    // 1. Direct JSON Envelope Parsing (handles JSON SSE frames)
+    if (content.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(content);
+
+        // Thought stream: {"type": "thought", "content": "...", "delta": "..."}
+        if (parsed.type === 'thought') {
+          return { type: 'thought', thought: parsed.delta ?? parsed.content ?? parsed.thought ?? '' };
+        }
+
+        // Standard text chunk or embedded protocol message: {"type": "content", "delta": "..."}
+        if (parsed.type === 'content') {
+          const rawText = parsed.delta ?? parsed.content ?? '';
+
+          // Check if the content text itself contains embedded task chain or protocol commands
+          const embeddedEvent = SseDecoder.parseSpecialStringPayload(rawText);
+          if (embeddedEvent) {
+            return embeddedEvent;
+          }
+
+          return { type: 'text_chunk', text: rawText };
+        }
+
+        // Meta event: {"type": "meta", "data": {"conversation_id": "..."}}
+        if (parsed.type === 'meta' && parsed.data?.conversation_id) {
+          return { type: 'meta', conversationId: parsed.data.conversation_id };
+        }
+      } catch {
+        // Fallback to plain string pattern matching
+      }
+    }
+
+    // 2. Direct Raw String Parsing (if SSE payload wasn't a JSON object)
+    const directEvent = SseDecoder.parseSpecialStringPayload(content);
+    if (directEvent) {
+      return directEvent;
     }
 
     return { type: 'text_chunk', text: content };
   }
 
   /**
-   * Wendet Task Step Updates auf eine Liste von Phasen an (Immutabler Update).
+   * Cleans embedded __THOUGHT__: protocol strings from step results if needed.
+   */
+  static cleanStepResult(result: string | Record<string, unknown> | undefined): string | Record<string, unknown> | undefined {
+    if (typeof result !== 'string') return result;
+
+    if (result.includes('__THOUGHT__:')) {
+      // Remove __THOUGHT__:{"content": "..."} prefix pattern
+      return result.replace(/__THOUGHT__:\s*\{.*?\}\s*/gs, '').trim();
+    }
+
+    return result;
+  }
+
+  /**
+   * Applies task step updates to a list of phases (Immutable update).
    */
   static applyTaskStepUpdate(
     phases: TaskPhase[],
@@ -118,27 +204,27 @@ export class SseDecoder {
   ): TaskPhase[] {
     if (!phases || phases.length === 0) return [];
 
+    const cleanedResult = SseDecoder.cleanStepResult(result);
+
     return phases.map((phase) => {
       const phaseDepth = phase.callDepth ?? 0;
-      
+
       const updatedSteps = phase.steps.map((step) => {
-        // 1. Prüfen, ob dieser Step auf der aktuellen Ebene aktualisiert werden muss
         if (phaseDepth === targetDepth && step.step_number === stepNumber) {
           return {
             ...step,
             status,
-            ...(result !== undefined ? { result } : {})
+            ...(cleanedResult !== undefined ? { result: cleanedResult } : {})
           };
         }
 
-        // 2. Falls eine verschachtelte Sub-Task-Chain existiert, rekursiv durchreichen
         if (step.subTaskChain) {
           const updatedSubPhases = SseDecoder.applyTaskStepUpdate(
             [step.subTaskChain],
             stepNumber,
             status,
             targetDepth,
-            result
+            cleanedResult
           );
 
           return {

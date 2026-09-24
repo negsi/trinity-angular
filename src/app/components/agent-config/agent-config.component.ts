@@ -1,4 +1,4 @@
-import { Component, ElementRef, input, signal, inject, effect, viewChild, Injector, afterNextRender } from '@angular/core';
+import { Component, ElementRef, input, signal, inject, effect, viewChild, Injector, afterNextRender, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import { DatasourceService } from '../../services/datasource.service';
 import { DatasourceUI, DatasourceUploadResponse } from '../../models/datasource.model';
 import { SkillOption, CreateAgentDto, UpdateAgentDto } from '../../models/agent.model';
 import { formatBytes, determineFileType } from '../../utils/file.util';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 export interface AgentForm {
   name: FormControl<string>;
@@ -70,6 +71,16 @@ export class AgentConfigComponent {
 
   readonly dataSources = signal<DatasourceUI[]>([]);
   readonly isUploading = signal<boolean>(false);
+
+  readonly systemPromptValue = toSignal(
+    this.agentForm.controls.system_prompt.valueChanges,
+    { initialValue: this.agentForm.controls.system_prompt.value }
+  );
+
+  readonly parsedMarkdown = computed(() => {
+    const rawText = this.systemPromptValue() || '';
+    return marked.parse(rawText) as string;
+  });
 
   readonly skills = signal<SkillOption[]>([
     { id: '1', label: 'Fetch URL', systemName: 'fetch_url', selected: false },
@@ -166,14 +177,6 @@ export class AgentConfigComponent {
   applyHeading(level: number): void {
     const prefix = '#'.repeat(level) + ' ';
     this.applyFormat(prefix, '', `Heading ${level}`);
-  }
-
-  /**
-   * Parses Markdown to HTML string for the preview mode using marked
-   */
-  get parsedMarkdown(): string {
-    const rawText = this.agentForm.controls.system_prompt.value || '';
-    return marked.parse(rawText) as string;
   }
 
   toggleSkill(skillId: string): void {

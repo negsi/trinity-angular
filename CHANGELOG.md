@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+# [0.3.0] - 2026-09-24
+
+### Added
+
+- Visual streaming indicators and styling to agent list items to show active generation status.
+- Collapsible reasoning and execution timeline accordion to chat message bubbles.
+- `ThoughtTimelineBlock` model type and SSE stream handling for agent `thought` events.
+- Dedicated dark and light mode theme design tokens for task chain cards and thought containers.
+
+### Changed
+
+- Refactored message formatting in `ApiChatService` to build chronological timelines and extract embedded thought payloads from task step results.
+- Enhanced `SseDecoder` with prefix pattern parsing for custom protocol payloads (`__THOUGHT__:`, `__TASK_CHAIN__:`, `__ATTACHMENTS__:`) and result sanitization.
+- Updated `TaskChainListComponent` to support configurable initial expansion states.
+
 # [0.2.5] - 2026-09-16
 
 ### Added
@@ -362,7 +377,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.5...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.3.0...develop
+[0.3.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.3.0
 [0.2.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.5
 [0.2.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.4
 [0.2.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.3

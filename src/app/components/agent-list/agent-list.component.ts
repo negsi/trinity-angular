@@ -8,6 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ApiAgentService } from '../../services/agent.service';
 import { ApiGroupService } from '../../services/group.service';
+import { ApiChatService } from '../../services/chat.service';
 import { Agent } from '../../models/agent.model';
 import { Group } from '../../models/group.model';
 import { getInitials, getAvatarColor } from '../../utils/avatar.util';
@@ -63,6 +64,7 @@ export class AgentListComponent implements OnInit {
 
   readonly agentService = inject(ApiAgentService);
   readonly groupService = inject(ApiGroupService);
+  readonly chatService = inject(ApiChatService);
 
   readonly getInitials = getInitials;
   readonly getAvatarBg = getAvatarColor;
@@ -399,5 +401,9 @@ export class AgentListComponent implements OnInit {
     
     this.sortMode.set(nextMode);
     localStorage.setItem(this.SORT_MODE_KEY, nextMode);
+  }
+
+  isAgentStreaming(agentId: string): boolean {
+    return this.chatService.isAgentStreaming(agentId)();
   }
 }
