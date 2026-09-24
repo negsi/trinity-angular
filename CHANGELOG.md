@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+### Changed
+
+# [0.3.0] - 2026-09-24
+
+### Added
+
 - Visual streaming indicators and styling to agent list items to show active generation status.
 - Collapsible reasoning and execution timeline accordion to chat message bubbles.
 - `ThoughtTimelineBlock` model type and SSE stream handling for agent `thought` events.
@@ -371,7 +377,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Angular components for agent configuration, chat workspace, and sidebar
 - Application models
 
-[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.2.5...develop
+[Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.3.0...develop
+[0.3.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.3.0
 [0.2.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.5
 [0.2.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.4
 [0.2.3]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.3
