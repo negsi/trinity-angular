@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Support for rendering LaTeX mathematical expressions in chat messages using KaTeX
+
 ### Changed
 
 - Automatically refocus the chat input field after clearing or resetting conversation messages
