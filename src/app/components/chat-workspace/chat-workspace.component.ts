@@ -496,6 +496,10 @@ export class ChatWorkspaceComponent {
     this.chatService.clearConversationMessages(currentAgent.id, convId).subscribe({
       next: () => {
         this.chatService.clearMessages(currentAgent.id);
+        
+        requestAnimationFrame(() => {
+          this.focusInput();
+        });
       },
       error: (err: unknown) => console.error('Failed to reset conversation:', err)
     });

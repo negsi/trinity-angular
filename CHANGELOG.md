@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Automatically refocus the chat input field after clearing or resetting conversation messages
+
 # [0.3.0] - 2026-09-24
 
 ### Added
