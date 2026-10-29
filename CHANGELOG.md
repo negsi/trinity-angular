@@ -4,15 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+Here is the updated changelog entry in English:
+
 # [Unreleased]
 
 ### Added
 
 - Support for rendering LaTeX mathematical expressions in chat messages using KaTeX
+- Agent schedule management within the agent configuration, including creation and editing forms
+- Support for recurring triggers (Cron with presets) and one-time execution triggers
+- Expandable execution history for schedules with adjustable entry limits (5, 10, 25, 50) and status indicators
+- Overview list of saved schedules with quick actions for editing and deleting
 
 ### Changed
 
 - Automatically refocus the chat input field after clearing or resetting conversation messages
+- Integrated the schedule execution history directly into the schedules tab as a collapsible accordion instead of a separate tab
 
 # [0.3.0] - 2026-09-24
 

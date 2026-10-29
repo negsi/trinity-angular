@@ -9,8 +9,10 @@ import { MatMenuModule } from '@angular/material/menu';
 import { marked } from 'marked';
 import { ApiAgentService } from '../../services/agent.service';
 import { DatasourceService } from '../../services/datasource.service';
+import { ScheduleService } from '../../services/schedule.service'; // Added Schedule Service
 import { DatasourceUI, DatasourceUploadResponse } from '../../models/datasource.model';
 import { SkillOption, CreateAgentDto, UpdateAgentDto } from '../../models/agent.model';
+import { ScheduleTriggerType, ScheduleEntity, UpsertScheduleDto, ScheduleExecutionEntity } from '../../models/schedule.model';
 import { formatBytes, determineFileType } from '../../utils/file.util';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -24,7 +26,22 @@ export interface AgentForm {
   memory_message_count: FormControl<number | null>;
 }
 
-export type ConfigTab = 'base' | 'memory_ds';
+export interface ScheduleForm {
+  name: FormControl<string>;
+  trigger_type: FormControl<ScheduleTriggerType>;
+  cron_expression: FormControl<string>;
+  scheduled_date: FormControl<string>;
+  scheduled_time: FormControl<string>;
+  prompt: FormControl<string>;
+  is_active: FormControl<boolean>;
+}
+
+export interface CronPreset {
+  label: string;
+  expression: string;
+}
+
+export type ConfigTab = 'base' | 'memory_ds' | 'schedules';
 export type EditorMode = 'edit' | 'preview';
 
 @Component({
@@ -48,6 +65,7 @@ export class AgentConfigComponent {
   private readonly fb = inject(FormBuilder);
   private readonly injector = inject(Injector);
   private readonly datasourceService = inject(DatasourceService);
+  private readonly scheduleService = inject(ScheduleService); // Injected Schedule Service
   readonly agentService = inject(ApiAgentService);
 
   readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
@@ -59,6 +77,14 @@ export class AgentConfigComponent {
   /** Active editor view mode signal */
   readonly editorMode = signal<EditorMode>('edit');
 
+  /** List of schedules configured for the selected agent */
+  readonly agentSchedules = signal<ScheduleEntity[]>([]);
+  /** Currently selected schedule entity for editing */
+  readonly selectedSchedule = signal<ScheduleEntity | null>(null);
+  /** Execution history list for the selected schedule */
+  readonly scheduleExecutions = signal<ScheduleExecutionEntity[]>([]);
+  readonly isLoadingSchedules = signal<boolean>(false);
+
   readonly agentForm: FormGroup<AgentForm> = this.fb.group({
     name: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     description: this.fb.control('', { nonNullable: true }),
@@ -68,6 +94,26 @@ export class AgentConfigComponent {
     memory_limit_type: this.fb.control<'all' | 'message_count'>('all', { nonNullable: true }),
     memory_message_count: this.fb.control<number | null>(10)
   });
+
+  /** Form group for managing current schedule configuration */
+  readonly scheduleForm: FormGroup<ScheduleForm> = this.fb.group({
+    name: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    trigger_type: this.fb.control<ScheduleTriggerType>('cron', { nonNullable: true }),
+    cron_expression: this.fb.control('0 8 * * *', { nonNullable: true }),
+    scheduled_date: this.fb.control('', { nonNullable: true }),
+    scheduled_time: this.fb.control('08:00', { nonNullable: true }),
+    prompt: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    is_active: this.fb.control(true, { nonNullable: true })
+  });
+
+  /** Common Cron expression presets for user convenience */
+  readonly cronPresets: CronPreset[] = [
+    { label: 'Stündlich (:00)', expression: '0 * * * *' },
+    { label: 'Täglich um 08:00', expression: '0 8 * * *' },
+    { label: 'Täglich um 18:00', expression: '0 18 * * *' },
+    { label: 'Jeden Montag um 09:00', expression: '0 9 * * 1' },
+    { label: 'Monatlich am 1. um 08:00', expression: '0 8 1 * *' }
+  ];
 
   readonly dataSources = signal<DatasourceUI[]>([]);
   readonly isUploading = signal<boolean>(false);
@@ -94,6 +140,11 @@ export class AgentConfigComponent {
     { id: '9', label: 'Query Database', systemName: 'query_database', selected: false },
     { id: '10', label: 'Schedule Task', systemName: 'schedule_task', selected: false }
   ]);
+
+  /** Steuerung für den Ausführungsverlauf-Dropdown-Bereich */
+  readonly isExecutionsOpen = signal<boolean>(false);
+  /** Limit für angezeigte Verlaufseinträge */
+  readonly executionLimit = signal<number>(10);
 
   constructor() {
     effect(() => {
@@ -132,7 +183,210 @@ export class AgentConfigComponent {
         } else {
           this.dataSources.set([]);
         }
+
+        // Load schedules for the selected agent
+        this.loadAgentSchedules(selected.id);
+      } else {
+        this.agentSchedules.set([]);
+        this.selectedSchedule.set(null);
+        this.scheduleExecutions.set([]);
       }
+    });
+  }
+
+  /** Berechnete, limitierte Liste von Ausführungen */
+  readonly limitedExecutions = computed(() => {
+    const list = this.scheduleExecutions();
+    const limit = this.executionLimit();
+    return list.slice(0, limit);
+  });
+
+  toggleExecutionsDropdown(): void {
+    this.isExecutionsOpen.update((val) => !val);
+  }
+
+  updateExecutionLimit(event: Event): void {
+    const val = +(event.target as HTMLSelectElement).value;
+    this.executionLimit.set(val);
+  }
+
+  /** Löschen eines Schedules direkt über die obere Liste per ID */
+  onDeleteScheduleItem(scheduleId: string): void {
+    this.scheduleService.deleteSchedule(scheduleId).subscribe({
+      next: () => {
+        this.agentSchedules.update((list) => list.filter((s) => s.id !== scheduleId));
+        if (this.selectedSchedule()?.id === scheduleId) {
+          const remaining = this.agentSchedules();
+          if (remaining.length > 0) {
+            this.selectSchedule(remaining[0]);
+          } else {
+            this.resetScheduleForm();
+          }
+        }
+      },
+      error: (err) => console.error('Failed to delete schedule:', err)
+    });
+  }
+
+  /**
+   * Fetches all schedules for the given agent from backend
+   */
+  loadAgentSchedules(agentId: string): void {
+    this.isLoadingSchedules.set(true);
+    this.scheduleService.getAgentSchedules(agentId).subscribe({
+      next: (schedules) => {
+        this.agentSchedules.set(schedules);
+        if (schedules.length > 0) {
+          this.selectSchedule(schedules[0]);
+        } else {
+          this.resetScheduleForm();
+        }
+        this.isLoadingSchedules.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load agent schedules:', err);
+        this.isLoadingSchedules.set(false);
+      }
+    });
+  }
+
+  /**
+   * Selects and loads a schedule into the form
+   */
+  selectSchedule(schedule: ScheduleEntity): void {
+    this.selectedSchedule.set(schedule);
+    
+    let dateStr = '';
+    let timeStr = '08:00';
+    if (schedule.scheduled_at) {
+      const dt = new Date(schedule.scheduled_at);
+      dateStr = dt.toISOString().split('T')[0];
+      timeStr = dt.toTimeString().substring(0, 5);
+    }
+
+    this.scheduleForm.patchValue({
+      name: schedule.name,
+      trigger_type: schedule.trigger_type,
+      cron_expression: schedule.cron_expression || '0 8 * * *',
+      scheduled_date: dateStr,
+      scheduled_time: timeStr,
+      prompt: schedule.prompt,
+      is_active: schedule.is_active
+    });
+
+    this.loadScheduleExecutions(schedule.id);
+  }
+
+  /**
+   * Loads execution history for a schedule
+   */
+  loadScheduleExecutions(scheduleId: string): void {
+    this.scheduleService.getScheduleExecutions(scheduleId).subscribe({
+      next: (executions) => this.scheduleExecutions.set(executions),
+      error: (err) => console.error('Failed to load schedule executions:', err)
+    });
+  }
+
+  /**
+   * Resets schedule form for creating a new schedule
+   */
+  resetScheduleForm(): void {
+    this.selectedSchedule.set(null);
+    this.scheduleForm.reset({
+      name: '',
+      trigger_type: 'cron',
+      cron_expression: '0 8 * * *',
+      scheduled_date: '',
+      scheduled_time: '08:00',
+      prompt: '',
+      is_active: true
+    });
+    this.scheduleExecutions.set([]);
+  }
+
+  /**
+   * Saves or updates the schedule via backend API
+   */
+  onSaveSchedule(): void {
+
+    if (this.scheduleForm.invalid) {
+      this.scheduleForm.markAllAsTouched();
+      return;
+    }
+
+    const agentId = this.agentService.selectedAgent()?.id;
+    if (!agentId) return;
+
+    const formVal = this.scheduleForm.getRawValue();
+    let scheduledAtIso: string | null = null;
+    
+    if (formVal.trigger_type === 'once' && formVal.scheduled_date && formVal.scheduled_time) {
+      scheduledAtIso = new Date(`${formVal.scheduled_date}T${formVal.scheduled_time}:00`).toISOString();
+    }
+
+    const dto: UpsertScheduleDto = {
+      name: formVal.name,
+      prompt: formVal.prompt,
+      trigger_type: formVal.trigger_type,
+      is_active: formVal.is_active,
+      cron_expression: formVal.trigger_type === 'cron' ? formVal.cron_expression : null,
+      scheduled_at: scheduledAtIso
+    };
+
+    const currentSchedule = this.selectedSchedule();
+
+    if (currentSchedule) {
+      this.scheduleService.updateSchedule(agentId, currentSchedule.id, dto).subscribe({
+        next: (updated) => {
+          this.agentSchedules.update((list) => list.map((s) => s.id === updated.id ? updated : s));
+          this.selectSchedule(updated);
+        },
+        error: (err) => console.error('Failed to update schedule:', err)
+      });
+    } else {
+      this.scheduleService.createSchedule(agentId, dto).subscribe({
+        next: (created) => {
+          this.agentSchedules.update((list) => [...list, created]);
+          this.selectSchedule(created);
+        },
+        error: (err) => console.error('Failed to create schedule:', err)
+      });
+    }
+  }
+
+  /**
+   * Deletes the currently selected schedule
+   */
+  onDeleteSchedule(): void {
+    const current = this.selectedSchedule();
+    if (!current) return;
+
+    this.scheduleService.deleteSchedule(current.id).subscribe({
+      next: () => {
+        this.agentSchedules.update((list) => list.filter((s) => s.id !== current.id));
+        const remaining = this.agentSchedules();
+        if (remaining.length > 0) {
+          this.selectSchedule(remaining[0]);
+        } else {
+          this.resetScheduleForm();
+        }
+      },
+      error: (err) => console.error('Failed to delete schedule:', err)
+    });
+  }
+
+  /**
+   * Triggers an immediate manual test execution ('Run Now')
+   */
+  onRunScheduleNow(): void {
+    const current = this.selectedSchedule();
+    if (!current) return;
+
+    this.scheduleService.runScheduleNow(current.id).subscribe({
+      next: (execution) => {
+        this.scheduleExecutions.update((list) => [execution, ...list]);
+      },
+      error: (err) => console.error('Failed to run schedule immediately:', err)
     });
   }
 
@@ -144,9 +398,15 @@ export class AgentConfigComponent {
     this.editorMode.set(mode);
   }
 
-  /**
-   * Applies Markdown formatting at cursor position or selection
-   */
+  setTriggerType(type: ScheduleTriggerType): void {
+    this.scheduleForm.controls.trigger_type.setValue(type);
+  }
+
+  applyCronPreset(expression: string): void {
+    this.scheduleForm.controls.cron_expression.setValue(expression);
+    this.scheduleForm.controls.cron_expression.markAsDirty();
+  }
+
   applyFormat(prefix: string, suffix: string = prefix, defaultText: string = ''): void {
     const textarea = this.promptTextarea()?.nativeElement;
     if (!textarea) return;
@@ -171,9 +431,6 @@ export class AgentConfigComponent {
     });
   }
 
-  /**
-   * Applies Heading formatting (H1 - H6)
-   */
   applyHeading(level: number): void {
     const prefix = '#'.repeat(level) + ' ';
     this.applyFormat(prefix, '', `Heading ${level}`);
