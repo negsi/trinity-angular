@@ -103,7 +103,7 @@
                       <span class="dot"></span>
                     </div>
                   } @else {
-                    <markdown [data]="msg.text"></markdown>
+                    <markdown [data]="msg.text" katex></markdown>
                   }
 
                   @if (msg.attachments && msg.attachments.length > 0) {

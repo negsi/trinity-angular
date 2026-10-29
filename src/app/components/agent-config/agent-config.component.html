@@ -299,6 +299,253 @@
       }
     </div>
 
+    <!-- TAB 3: Zeitplan & Trigger (Schedule List, Form & Executions History) -->
+    <div class="stacked-tab" [class.is-expanded]="activeTab() === 'schedules'">
+      <button type="button" class="stacked-tab-header" (click)="setTab('schedules')">
+        <div class="header-left">
+          <mat-icon>schedule</mat-icon>
+          <span>Zeitplan & Trigger ({{ agentSchedules().length }})</span>
+        </div>
+        <mat-icon class="expand-icon">
+          {{ activeTab() === 'schedules' ? 'expand_less' : 'expand_more' }}
+        </mat-icon>
+      </button>
+
+      @if (activeTab() === 'schedules') {
+        <div class="stacked-tab-body">
+          
+          <!-- Sektion 1: Liste der gespeicherten Schedules mit Edit/Delete -->
+          <div class="schedules-overview-section">
+            <div class="schedules-list-header">
+              <span class="section-subtitle">GESPEICHERTE ZEITPLÄNE</span>
+              <button type="button" class="btn-new-schedule" (click)="resetScheduleForm()">
+                <mat-icon>add</mat-icon> Neuer Zeitplan
+              </button>
+            </div>
+
+            <div class="schedules-chips-list">
+              @for (sched of agentSchedules(); track sched.id) {
+                <div 
+                  class="schedule-pill-card" 
+                  [class.active]="selectedSchedule()?.id === sched.id"
+                  (click)="selectSchedule(sched)"
+                >
+                  <div class="pill-info">
+                    <mat-icon class="pill-icon">{{ sched.trigger_type === 'cron' ? 'schedule' : 'event' }}</mat-icon>
+                    <span class="pill-name" [title]="sched.name">{{ sched.name }}</span>
+                    <span class="pill-status" [class.active]="sched.is_active">
+                      {{ sched.is_active ? 'Aktiv' : 'Inaktiv' }}
+                    </span>
+                  </div>
+                  <div class="pill-actions" (click)="$event.stopPropagation()">
+                    <button type="button" class="icon-action-btn" title="Bearbeiten" (click)="selectSchedule(sched)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button type="button" class="icon-action-btn delete" title="Löschen" (click)="onDeleteScheduleItem(sched.id)">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="ds-empty">
+                  <span>Keine Zeitpläne konfiguriert. Erstelle deinen ersten Zeitplan!</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Sektion 2: Formular (Erstellen / Editieren) -->
+          <div class="schedule-form-container">
+            <div class="form-section-divider">
+              <span>{{ selectedSchedule() ? 'Zeitplan bearbeiten' : 'Neuen Zeitplan erstellen' }}</span>
+            </div>
+
+            <div class="schedule-top-bar">
+              <div class="field-row flex-grow">
+                <label class="field-label" for="schedName">NAME</label>
+                <input 
+                  id="schedName" 
+                  type="text" 
+                  class="custom-input" 
+                  [formControl]="scheduleForm.controls.name"
+                  placeholder="z. B. Tägliche Codebase-Analyse & Changelog-Sync" 
+                />
+              </div>
+              
+              <div class="next-run-badge">
+                <mat-icon>schedule</mat-icon>
+                <span class="run-time">
+                  @if (selectedSchedule()?.next_run_at) {
+                    {{ selectedSchedule()?.next_run_at | date:'medium' }}
+                  } @else {
+                    Bereit
+                  }
+                </span>
+              </div>
+            </div>
+
+            <!-- Trigger-Auswahl -->
+            <div class="trigger-selection-section">
+              <span class="section-subtitle">TRIGGER-MECHANISMUS WÄHLEN</span>
+              <div class="trigger-cards-grid compact-grid">
+                <div 
+                  class="trigger-card compact" 
+                  [class.active]="scheduleForm.controls.trigger_type.value === 'cron'"
+                  (click)="setTriggerType('cron')"
+                >
+                  <div class="card-header-row">
+                    <mat-icon>schedule</mat-icon>
+                    <strong>Wiederkehrend (Cron)</strong>
+                    @if (scheduleForm.controls.trigger_type.value === 'cron') {
+                      <mat-icon class="check-icon">check</mat-icon>
+                    }
+                  </div>
+                  <span class="card-desc">Feste Intervalle, Stündlich, Täglich oder Benutzerdefiniert</span>
+                </div>
+
+                <div 
+                  class="trigger-card compact" 
+                  [class.active]="scheduleForm.controls.trigger_type.value === 'once'"
+                  (click)="setTriggerType('once')"
+                >
+                  <div class="card-header-row">
+                    <mat-icon>event</mat-icon>
+                    <strong>Einmalige Ausführung</strong>
+                    @if (scheduleForm.controls.trigger_type.value === 'once') {
+                      <mat-icon class="check-icon">check</mat-icon>
+                    }
+                  </div>
+                  <span class="card-desc">Exaktes Datum und Uhrzeit in der Zukunft</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trigger Details -->
+            @if (scheduleForm.controls.trigger_type.value === 'cron') {
+              <div class="trigger-details-panel">
+                <div class="cron-builder">
+                  <div class="field-row">
+                    <label class="field-label">PRESETS</label>
+                    <div class="preset-buttons">
+                      @for (preset of cronPresets; track preset.expression) {
+                        <button 
+                          type="button" 
+                          class="preset-chip"
+                          [class.active]="scheduleForm.controls.cron_expression.value === preset.expression"
+                          (click)="applyCronPreset(preset.expression)"
+                        >
+                          {{ preset.label }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="field-row">
+                    <label class="field-label" for="cronExpr">CRON MASK</label>
+                    <div class="cron-input-group">
+                      <input 
+                        id="cronExpr" 
+                        type="text" 
+                        class="custom-input cron-input" 
+                        [formControl]="scheduleForm.controls.cron_expression"
+                        placeholder="* * * * *"
+                      />
+                      <span class="cron-hint">Format: <code>minute hour day-of-month month day-of-week</code></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            } @else if (scheduleForm.controls.trigger_type.value === 'once') {
+              <div class="trigger-details-panel">
+                <div class="datetime-picker-row">
+                  <div class="field-row date-field">
+                    <label class="field-label" for="schedDate">DATUM</label>
+                    <input id="schedDate" type="date" class="custom-input" [formControl]="scheduleForm.controls.scheduled_date"/>
+                  </div>
+                  <div class="field-row time-field">
+                    <label class="field-label" for="schedTime">UHRZEIT</label>
+                    <input id="schedTime" type="time" class="custom-input" [formControl]="scheduleForm.controls.scheduled_time"/>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Task-Prompt -->
+            <div class="editor-section">
+              <div class="editor-header">
+                <span class="editor-title">AUSZUFÜHRENDER PROMPT / TASK-INSTRUKTION</span>
+              </div>
+              <textarea 
+                class="prompt-textarea" 
+                rows="3" 
+                [formControl]="scheduleForm.controls.prompt"
+                placeholder="Führe eine automatische Überprüfung aus..."
+              ></textarea>
+            </div>
+
+            <!-- Formular Aktionen -->
+            <div class="schedule-action-footer">
+              <button type="button" class="btn-delete-schedule" (click)="onDeleteSchedule()" [disabled]="!selectedSchedule()">
+                <mat-icon>delete_outline</mat-icon> Zeitplan löschen
+              </button>
+              <div class="right-actions">
+                <button type="button" class="btn-test-run" (click)="onRunScheduleNow()" [disabled]="!selectedSchedule()">
+                  <mat-icon>play_arrow</mat-icon> Jetzt Testen
+                </button>
+                <button type="button" class="btn-save-schedule" (click)="onSaveSchedule()">
+                  <mat-icon>save</mat-icon> {{ selectedSchedule() ? 'Änderungen Speichern' : 'Zeitplan Anlegen' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sektion 3: Ausklappbarer Ausführungsverlauf mit Limitierung -->
+          <div class="execution-history-dropdown-section">
+            <div class="dropdown-toggle-bar" (click)="toggleExecutionsDropdown()">
+              <div class="dropdown-title-left">
+                <mat-icon>history</mat-icon>
+                <span>Ausführungsverlauf</span>
+                <span class="exec-count-pill">({{ scheduleExecutions().length }})</span>
+              </div>
+              <div class="dropdown-controls" (click)="$event.stopPropagation()">
+                <label class="limit-label" for="execLimit">Limit:</label>
+                <select id="execLimit" class="limit-select" [value]="executionLimit()" (change)="updateExecutionLimit($event)">
+                  <option [value]="5">5</option>
+                  <option [value]="10">10</option>
+                  <option [value]="25">25</option>
+                  <option [value]="50">50</option>
+                </select>
+                <mat-icon class="arrow-icon" [class.rotated]="isExecutionsOpen()">expand_more</mat-icon>
+              </div>
+            </div>
+
+            @if (isExecutionsOpen()) {
+              <div class="dropdown-content-body">
+                <div class="executions-list">
+                  @for (exec of limitedExecutions(); track exec.id) {
+                    <div class="execution-item" [class]="exec.status">
+                      <div class="exec-status-icon">
+                        <mat-icon>{{ exec.status === 'success' ? 'check_circle' : (exec.status === 'failed' ? 'error' : 'schedule') }}</mat-icon>
+                      </div>
+                      <div class="exec-details">
+                        <span class="exec-prompt">{{ exec.resolved_prompt }}</span>
+                        <span class="exec-meta">Gestartet: {{ exec.started_at | date:'medium' }} @if(exec.error_message) { · Error: {{ exec.error_message }} }</span>
+                      </div>
+                      <span class="badge" [class]="exec.status">{{ exec.status | uppercase }}</span>
+                    </div>
+                  } @empty {
+                    <div class="ds-empty">
+                      <span>Keine Ausführungen für diesen Zeitplan vorhanden</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+        </div>
+      }
+    </div>
   </div>
 
   <!-- Sticky Footer Buttons -->

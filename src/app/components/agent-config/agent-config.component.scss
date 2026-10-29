@@ -635,3 +635,568 @@
     }
   }
 }
+
+/* Schedule-specific styles (Dark & White Mode) */
+.schedule-top-bar {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end; /* Align bottom with the input field */
+  margin-bottom: 16px;
+
+  .flex-grow {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .next-run-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px; /* Exact height matching custom-input (padding + line-height) */
+    box-sizing: border-box;
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    padding: 0 14px;
+    border-radius: 8px;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    mat-icon {
+      color: var(--accent-color);
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .run-time {
+      font-size: 0.85rem;
+      font-weight: 600;
+
+      small {
+        color: var(--text-muted);
+        font-weight: normal;
+        margin-left: 4px;
+      }
+    }
+  }
+}
+
+.trigger-selection-section {
+  margin-bottom: 16px;
+
+  .section-subtitle {
+    font-family: monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .compact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+
+    .trigger-card.compact {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 14px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      .card-header-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: var(--text-muted);
+        }
+
+        strong {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        .check-icon {
+          margin-left: auto;
+          color: var(--pill-active-text);
+        }
+      }
+
+      .card-desc {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        line-height: 1.35;
+      }
+
+      &.active {
+        border-color: var(--accent-color);
+        background-color: var(--pill-active-bg);
+
+        .card-header-row mat-icon, strong {
+          color: var(--pill-active-text);
+        }
+      }
+
+      &:hover:not(.active) {
+        border-color: var(--text-muted);
+      }
+    }
+  }
+}
+
+.trigger-details-panel {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+
+  .preset-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+
+    .preset-chip {
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        border-color: var(--accent-color);
+      }
+
+      &.active {
+        background-color: var(--pill-active-bg);
+        border-color: var(--accent-color);
+        color: var(--pill-active-text);
+        font-weight: 600;
+      }
+    }
+  }
+
+  .cron-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .cron-input {
+      font-family: monospace;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+    }
+
+    .cron-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+
+      code {
+        font-family: monospace;
+        color: var(--text-primary);
+      }
+    }
+  }
+
+  .datetime-picker-row {
+    display: flex;
+    gap: 16px;
+
+    .date-field, .time-field {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    input[type="date"], input[type="time"] {
+      color-scheme: dark;
+
+      .light-mode & {
+        color-scheme: light;
+      }
+    }
+  }
+}
+
+.schedule-action-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--toolbar-border);
+
+  .btn-delete-schedule {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+
+    &:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  .right-actions {
+    display: flex;
+    gap: 10px;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-test-run {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+
+      &:hover {
+        background: var(--input-bg);
+      }
+    }
+
+    .btn-save-schedule {
+      background-color: var(--accent-color);
+      border: none;
+      color: #ffffff;
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+  }
+}
+
+/* Schedules Overview List Styles */
+.schedules-overview-section {
+  margin-bottom: 20px;
+  
+  .schedules-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .section-subtitle {
+      font-family: monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    .btn-new-schedule {
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--pill-active-text);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+
+      &:hover {
+        background-color: var(--pill-active-bg);
+      }
+    }
+  }
+
+  .schedules-chips-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+
+    .schedule-pill-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      .pill-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+
+        .pill-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          color: var(--text-muted);
+        }
+
+        .pill-name {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .pill-status {
+          font-size: 0.65rem;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--text-muted);
+
+          &.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+          }
+        }
+      }
+
+      .pill-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .icon-action-btn {
+          background: transparent;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+
+          &:hover {
+            color: var(--text-primary);
+            background-color: var(--input-bg);
+          }
+
+          &.delete:hover {
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+          }
+        }
+      }
+
+      &.active {
+        border-color: var(--accent-color);
+        background-color: var(--pill-active-bg);
+
+        .pill-info .pill-icon, .pill-info .pill-name {
+          color: var(--pill-active-text);
+        }
+      }
+
+      &:hover:not(.active) {
+        border-color: var(--text-muted);
+      }
+    }
+  }
+}
+
+.form-section-divider {
+  border-top: 1px solid var(--toolbar-border);
+  margin: 16px 0;
+  position: relative;
+  
+  span {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--bg-color);
+    padding: 0 8px;
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+}
+
+/* Execution History Dropdown Section */
+.execution-history-dropdown-section {
+  margin-top: 24px;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background-color: var(--card-bg);
+  overflow: hidden;
+
+  .dropdown-toggle-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+
+    .dropdown-title-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--accent-color);
+      }
+
+      .exec-count-pill {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: normal;
+      }
+    }
+
+    .dropdown-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .limit-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .limit-select {
+        background-color: var(--input-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-primary);
+        font-size: 0.75rem;
+        border-radius: 4px;
+        padding: 2px 6px;
+        outline: none;
+      }
+
+      .arrow-icon {
+        transition: transform 0.2s ease;
+        color: var(--text-muted);
+
+        &.rotated {
+          transform: rotate(180deg);
+        }
+      }
+    }
+
+    &:hover {
+      background-color: var(--input-bg);
+    }
+  }
+
+  .dropdown-content-body {
+    padding: 14px 16px;
+    border-top: 1px solid var(--toolbar-border);
+    background-color: var(--bg-color);
+
+    .executions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 250px;
+      overflow-y: auto;
+
+      .execution-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 6px;
+
+        .exec-status-icon mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+
+          &.success, :host-context(.success) & { color: #10b981; }
+          &.failed, :host-context(.error) & { color: #ef4444; }
+        }
+
+        .exec-details {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          min-width: 0;
+
+          .exec-prompt {
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .exec-meta {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+          }
+        }
+
+        .badge {
+          font-size: 0.65rem;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 4px;
+
+          &.success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+          &.failed { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+          &.running { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        }
+      }
+    }
+  }
+}
