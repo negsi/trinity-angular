@@ -10,6 +10,12 @@ Here is the updated changelog entry in English:
 
 ### Added
 
+### Changed
+
+# [0.3.1] - 2026-10-29
+
+### Added
+
 - Support for rendering LaTeX mathematical expressions in chat messages using KaTeX
 - Agent schedule management within the agent configuration, including creation and editing forms
 - Support for recurring triggers (Cron with presets) and one-time execution triggers
@@ -389,6 +395,7 @@ Here is the updated changelog entry in English:
 - Application models
 
 [Unreleased]: https://github.com/negsi/trinity-angular/compare/v0.3.0...develop
+[0.3.1]: https://github.com/negsi/trinity-angular/releases/tag/v0.3.1
 [0.3.0]: https://github.com/negsi/trinity-angular/releases/tag/v0.3.0
 [0.2.5]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.5
 [0.2.4]: https://github.com/negsi/trinity-angular/releases/tag/v0.2.4
