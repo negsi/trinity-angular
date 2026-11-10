@@ -406,4 +406,13 @@ export class AgentListComponent implements OnInit {
   isAgentStreaming(agentId: string): boolean {
     return this.chatService.isAgentStreaming(agentId)();
   }
+
+    /**
+   * Übergibt den gezogenen Agenten an das HTML5 DataTransfer-Objekt für den Workflow-Canvas.
+   */
+  onAgentDragStart(event: DragEvent, agent: Agent): void {
+    if (!event.dataTransfer) return;
+    event.dataTransfer.setData('application/trinity-agent', JSON.stringify(agent));
+    event.dataTransfer.effectAllowed = 'copy';
+  }
 }

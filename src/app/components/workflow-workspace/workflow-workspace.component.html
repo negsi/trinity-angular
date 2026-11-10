@@ -1,0 +1,286 @@
+<div class="workflow-workspace-wrapper" [class.light-mode]="isLightMode()">
+  <!-- TOP TOOLBAR: Workflow-Auswahl, Name & Speichern -->
+  <header class="workflow-toolbar">
+    <div class="toolbar-left">
+      <div class="workflow-title-badge">
+        <mat-icon class="hub-icon">account_tree</mat-icon>
+        <span>Workflow</span>
+      </div>
+
+      <!-- Gespeicherte Workflows Dropdown -->
+      <div class="saved-workflows-select-wrapper">
+        <mat-icon class="select-icon">folder_open</mat-icon>
+        <select
+          class="workflow-select"
+          [ngModel]="workflowId()"
+          (ngModelChange)="onSelectSavedWorkflow($event)"
+          title="Gespeicherten Workflow laden"
+        >
+          <option value="" disabled>Gespeicherte Workflows ({{ workflowService.workflows().length }})</option>
+          @for (wf of workflowService.workflows(); track wf.id) {
+            <option [value]="wf.id">{{ wf.name }} ({{ wf.nodes.length }} Agenten)</option>
+          }
+        </select>
+      </div>
+
+      <!-- Aktueller Workflow-Name -->
+      <input
+        type="text"
+        class="workflow-name-input"
+        placeholder="Workflow-Name eingeben..."
+        [ngModel]="workflowName()"
+        (ngModelChange)="workflowName.set($event)"
+      />
+    </div>
+
+    <div class="toolbar-right">
+      @if (saveSuccessToast()) {
+        <span class="save-toast">
+          <mat-icon>check_circle</mat-icon>
+          Workflow gespeichert
+        </span>
+      }
+
+      <button
+        type="button"
+        class="toolbar-btn secondary"
+        (click)="onNewWorkflow()"
+        matTooltip="Neuen leeren Workflow anlegen"
+      >
+        <mat-icon>add</mat-icon>
+        <span>Neu</span>
+      </button>
+
+      <button
+        type="button"
+        class="toolbar-btn secondary"
+        (click)="onClearCanvas()"
+        [disabled]="nodes().length === 0"
+        matTooltip="Alle Knoten vom Raster entfernen"
+      >
+        <mat-icon>delete_sweep</mat-icon>
+        <span>Leeren</span>
+      </button>
+
+      <button
+        type="button"
+        class="toolbar-btn primary"
+        (click)="onSaveWorkflow()"
+        matTooltip="Workflow speichern"
+      >
+        <mat-icon>save</mat-icon>
+        <span>Speichern</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- INTERAKTIVES RASTERFELD (CANVAS) -->
+  <div
+    #canvasRef
+    class="workflow-canvas"
+    (dragover)="onCanvasDragOver($event)"
+    (dragleave)="onCanvasDragLeave()"
+    (drop)="onCanvasDrop($event)"
+  >
+    <!-- Empty-State-Hinweis wenn noch keine Agenten auf dem Raster liegen -->
+    @if (nodes().length === 0 && !dropPreviewPos()) {
+      <div class="canvas-empty-hint">
+        <div class="empty-icon-circle">
+          <mat-icon>drag_indicator</mat-icon>
+        </div>
+        <h3>Agenten per Drag & Drop hierher ziehen</h3>
+        <p>
+          Ziehe Agenten aus der linken Liste auf das Rasterfeld. Platziere sie in der Nähe eines
+          anderen Agenten zum automatischen Verbinden oder ziehe Pfeile über die seitlichen Punkte.
+        </p>
+      </div>
+    }
+
+    <!-- Drop-Vorschau beim Reinziehen eines Agenten -->
+    @if (dropPreviewPos(); as preview) {
+      <div
+        class="drop-preview-ghost"
+        [style.transform]="'translate(' + preview.x + 'px, ' + preview.y + 'px)'"
+      >
+        <span>Hier platzieren</span>
+      </div>
+    }
+
+    <!-- SVG-EBENE FÜR VERBINDUNGSPFEILE (EDGES) -->
+    <svg class="edges-svg-layer">
+      <defs>
+        <marker
+          id="workflow-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" class="arrow-marker-path" />
+        </marker>
+        <marker
+          id="workflow-arrow-active"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" class="arrow-marker-active-path" />
+        </marker>
+      </defs>
+
+      <!-- Bestehende Verbindungen -->
+      @for (edge of renderedEdges(); track edge.id) {
+        <g class="edge-group" (click)="removeEdge($event, edge.id)">
+          <!-- Unsichtbarer breiterer Klickpfad zum einfachen Löschen -->
+          <path [attr.d]="edge.path" class="edge-hit-area" />
+          <path
+            [attr.d]="edge.path"
+            class="edge-path"
+            marker-end="url(#workflow-arrow)"
+          />
+          <!-- Kleiner Löschen-Punkt in der Mitte der Verbindung (erscheint bei Hover) -->
+          <g
+            class="edge-delete-badge"
+            [attr.transform]="'translate(' + edge.midX + ',' + edge.midY + ')'"
+          >
+            <circle r="10" />
+            <text text-anchor="middle" dy="3.5">×</text>
+          </g>
+        </g>
+      }
+
+      <!-- Temporäre Linie während des Ziehens von einem Port oder beim Auto-Snap -->
+      @if (tempConnectionPath(); as tempPath) {
+        <path
+          [attr.d]="tempPath"
+          class="edge-path temp-edge"
+          marker-end="url(#workflow-arrow-active)"
+        />
+      }
+    </svg>
+
+    <!-- AGENTEN-KNOTEN (NODES) -->
+    @for (node of nodes(); track node.id; let idx = $index) {
+      <div
+        class="workflow-node-card"
+        [class.snap-highlight]="snapTargetNodeId() === node.id"
+        [class.port-target-highlight]="hoveredTargetPortNodeId() === node.id"
+        [class.has-prompt]="!!node.prompt"
+        [style.transform]="'translate(' + node.x + 'px, ' + node.y + 'px)'"
+        (mousedown)="onNodeMouseDown($event, node)"
+        (mouseenter)="onNodeMouseEnter(node)"
+        (mouseleave)="onNodeMouseLeave(node)"
+        (click)="onNodeClick($event, node)"
+      >
+        <!-- Linker Input-Port -->
+        <div
+          class="node-port input-port"
+          matTooltip="Eingang (Verbindung hierher ziehen)"
+        ></div>
+
+        <!-- Karten-Kopfzeile mit Avatar, Name und Löschen-Button -->
+        <div class="node-card-header">
+          <div
+            class="node-avatar"
+            [style.background-color]="getAvatarBg(node.agentName)"
+          >
+            {{ getInitials(node.agentName) }}
+          </div>
+
+          <div class="node-title-wrap">
+            <span class="node-step-label">Schritt {{ idx + 1 }}</span>
+            <h4 class="node-agent-name">{{ node.agentName }}</h4>
+          </div>
+
+          <button
+            type="button"
+            class="node-delete-btn"
+            title="Agent aus Workflow entfernen"
+            (click)="removeNode($event, node.id)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Karten-Fußzeile: Prompt-Status / Vorschau -->
+        <div class="node-card-body">
+          @if (node.prompt) {
+            <div class="prompt-preview" [title]="node.prompt">
+              <mat-icon class="prompt-icon configured">chat_bubble</mat-icon>
+              <span>{{ node.prompt }}</span>
+            </div>
+          } @else {
+            <div class="prompt-preview empty">
+              <mat-icon class="prompt-icon">edit_note</mat-icon>
+              <span>Klicken, um Prompt anzulegen...</span>
+            </div>
+          }
+        </div>
+
+        <!-- Rechter Output-Port (zum Ziehen von Pfeilen) -->
+        <div
+          class="node-port output-port"
+          matTooltip="Pfeil ziehen, um mit nächstem Agenten zu verbinden"
+          (mousedown)="onStartPortDrag($event, node)"
+        ></div>
+      </div>
+    }
+  </div>
+
+  <!-- MODAL-DIALOG FÜR DIE PROMPT-EINGABE BEI KLICK AUF EINEN KNOTEN -->
+  @if (editingNode(); as activeNode) {
+    <div class="prompt-modal-backdrop" (click)="closePromptModal()">
+      <div class="prompt-modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-agent-info">
+            <div
+              class="node-avatar large"
+              [style.background-color]="getAvatarBg(activeNode.agentName)"
+            >
+              {{ getInitials(activeNode.agentName) }}
+            </div>
+            <div>
+              <h3>Prompt für {{ activeNode.agentName }}</h3>
+              <p>Definiere die Aufgabe, die dieser Agent im Workflow ausführen soll.</p>
+            </div>
+          </div>
+
+          <button type="button" class="modal-close-btn" (click)="closePromptModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <label class="prompt-label" for="workflowNodePrompt">Aufgaben-Prompt / Instruktion</label>
+          <textarea
+            id="workflowNodePrompt"
+            class="prompt-textarea"
+            rows="6"
+            placeholder="z.B.: Analysiere die Ergebnisse des vorherigen Agenten und erstelle eine Zusammenfassung als Markdown-Bericht..."
+            [ngModel]="editingPromptText()"
+            (ngModelChange)="editingPromptText.set($event)"
+            autofocus
+          ></textarea>
+          <span class="prompt-hint">
+            Tipp: Bei eingehenden Verbindungen wird das Ergebnis des Vorgänger-Agenten automatisch im Kontext übergeben.
+          </span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="toolbar-btn secondary" (click)="closePromptModal()">
+            Abbrechen
+          </button>
+          <button type="button" class="toolbar-btn primary" (click)="saveNodePrompt()">
+            <mat-icon>check</mat-icon>
+            <span>Prompt übernehmen</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

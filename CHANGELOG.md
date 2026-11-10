@@ -10,7 +10,12 @@ Here is the updated changelog entry in English:
 
 ### Added
 
+- Added workflow workspace tab (`workflows`) to the navigation sidebar and main layout (`AppComponent`, `SidebarComponent`).
+- Added HTML5 drag-and-drop support (`application/trinity-agent`) for agents in `AgentListComponent` to allow dragging agents onto the workflow canvas.
+
 ### Changed
+
+- Updated `AppComponent` and `SidebarComponent` to support switching between the chat workspace and the workflow builder view.
 
 # [0.3.1] - 2026-10-29
 

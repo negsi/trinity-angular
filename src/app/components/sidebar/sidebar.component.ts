@@ -5,6 +5,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiAgentService } from '../../services/agent.service';
 
+export type MainWorkspaceTab = 'chat' | 'workflows';
+
 /**
  * Main application navigation sidebar.
  */
@@ -22,6 +24,12 @@ export class SidebarComponent implements OnInit {
   /** Whether the application is running in light mode */
   readonly isLightMode = input.required<boolean>();
 
+  /** Currently active main workspace tab ('chat' | 'workflows') */
+  readonly activeMainTab = input<MainWorkspaceTab>('chat');
+
+  /** Event emitted when switching between Chat and Workflows */
+  readonly mainTabChange = output<MainWorkspaceTab>();
+
   /** Event emitted when the theme toggle is pressed */
   readonly themeToggle = output<void>();
 
@@ -36,6 +44,13 @@ export class SidebarComponent implements OnInit {
         this.themeToggle.emit();
       }
     }
+  }
+
+  /**
+   * Switches the active main workspace view ('chat' or 'workflows').
+   */
+  selectMainTab(tab: MainWorkspaceTab): void {
+    this.mainTabChange.emit(tab);
   }
 
   /**
