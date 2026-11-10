@@ -128,7 +128,7 @@
   padding: 6px 12px;
   font-size: 0.88rem;
   font-weight: 500;
-  min-width: 220px;
+  min-width: 250px;
   outline: none;
   transition:
     border-color 0.2s,
@@ -260,8 +260,9 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 220px;
+  width: 250px;
   height: 96px;
+  box-sizing: border-box;
   border-radius: 14px;
   border: 2px dashed var(--wf-accent);
   background: var(--wf-accent-glow);
@@ -369,8 +370,9 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 220px;
+  width: 250px;
   height: 96px;
+  box-sizing: border-box;
   background-color: var(--wf-card-bg);
   border: 1.5px solid var(--wf-card-border);
   border-radius: 14px;
@@ -606,6 +608,7 @@
   top: 50%;
   width: 13px;
   height: 13px;
+  box-sizing: border-box;
   border-radius: 50%;
   background-color: var(--wf-card-bg);
   border: 2.5px solid var(--wf-accent);
@@ -623,11 +626,11 @@
   }
 
   &.input-port {
-    left: -7px;
+    left: -6.5px;
   }
 
   &.output-port {
-    right: -7px;
+    right: -6.5px;
   }
 }
 

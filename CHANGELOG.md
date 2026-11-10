@@ -4,19 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-Here is the updated changelog entry in English:
-
 # [Unreleased]
 
 ### Added
 
 - Added workflow workspace tab (`workflows`) to the navigation sidebar and main layout (`AppComponent`, `SidebarComponent`).
 - Added HTML5 drag-and-drop support (`application/trinity-agent`) for agents in `AgentListComponent` to allow dragging agents onto the workflow canvas.
-- Added interactive workflow execution simulation in `WorkflowWorkspaceComponent` with topological execution ordering, animated node/edge status indicators (`running`, `completed`), status pills, and a floating action button (FAB) to start/stop runs.
+- Added interactive workflow execution simulation in `WorkflowWorkspaceComponent` with parallel topological layer execution (`computeExecutionLayers`), logical step numbering per layer, animated node/edge status indicators (`running`, `completed`), status pills, and a floating action button (FAB) to start/stop runs.
+- Added REST API integration (`/api/v1/workflows`) in `WorkflowService` for loading, creating, updating, and deleting workflows on the backend, including multi-dependency support (`depends_on_steps`) in execution payloads.
 
 ### Changed
 
 - Updated `AppComponent` and `SidebarComponent` to support switching between the chat workspace and the workflow builder view.
+- Replaced `localStorage` workflow persistence in `WorkflowService` with `HttpClient`-based backend persistence and reactive `Observable` streams.
+- Improved workflow canvas rendering and coordinate calculation in `WorkflowWorkspaceComponent` by accounting for scroll offsets (`scrollLeft`, `scrollTop`), widening node cards (`250px`), and refining SVG port/arrow alignment.
 - Removed obsolete `concat_code.py` codebase aggregation utility script.
 
 # [0.3.1] - 2026-10-29

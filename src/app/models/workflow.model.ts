@@ -17,13 +17,15 @@ export interface WorkflowEdge {
 export interface WorkflowGraph {
   id: string;
   name: string;
+  description?: string;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+  createdAt?: string;
   updatedAt: string;
 }
 
 /**
- * Vorbereitete Struktur für das Flask-Backend (Task-Chain-Übersetzung).
+ * Struktur für das Flask-Backend (Task-Chain-Übersetzung).
  */
 export interface WorkflowExecutionStep {
   step: number;
@@ -31,6 +33,7 @@ export interface WorkflowExecutionStep {
   agent_id: string;
   prompt: string;
   depends_on_step?: number;
+  depends_on_steps?: number[];
 }
 
 export interface WorkflowExecutionPayload {

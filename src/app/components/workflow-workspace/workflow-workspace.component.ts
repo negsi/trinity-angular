@@ -48,13 +48,14 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   readonly isLightMode = input.required<boolean>();
   readonly workflowService = inject(WorkflowService);
 
-  // Raster- und Karten-Konstanten
+  // Raster- und Karten-Konstanten (exakt passend zu box-sizing: border-box)
   readonly GRID_SIZE = 24;
   readonly NODE_WIDTH = 220;
   readonly NODE_HEIGHT = 96;
+  readonly PORT_RADIUS = 6.5; // Halbe Breite des .node-port (13px / 2)
   readonly SNAP_DISTANCE = 210; // Radius für Auto-Snap & Auto-Connect
   readonly AUTO_OFFSET_X = 280; // Abstand beim automatischen Einrasten rechts neben einem Knoten
-  readonly SIMULATION_STEP_MS = 2000; // Dauer pro Agenten-Schritt in der Simulation
+  readonly SIMULATION_STEP_MS = 2000; // Dauer pro Ausführungs-Stufe in der Simulation
 
   // Lokaler Arbeitszustand des aktuell geöffneten Workflows
   readonly workflowId = signal<string>('');
@@ -67,19 +68,37 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   readonly snapTargetNodeId = signal<string | null>(null);
   readonly dropPreviewPos = signal<{ x: number; y: number } | null>(null);
 
-  // State für die Workflow-Simulation
+  // State für die Workflow-Simulation (unterstützt parallele Knoten pro Stufe!)
   readonly isSimulating = signal<boolean>(false);
   readonly simulationFinished = signal<boolean>(false);
-  readonly activeSimulationNodeId = signal<string | null>(null);
+  readonly activeSimulationNodeIds = signal<Set<string>>(new Set());
   readonly completedSimulationNodeIds = signal<Set<string>>(new Set());
   private simulationTimerId: ReturnType<typeof setTimeout> | null = null;
   private finishResetTimerId: ReturnType<typeof setTimeout> | null = null;
 
-  // Aktuell laufender Knoten für das Status-Banner unten rechts
+  // Aktuell laufende Knoten für das Status-Banner unten rechts
   readonly activeSimulationNode = computed(() => {
-    const activeId = this.activeSimulationNodeId();
-    if (!activeId) return null;
-    return this.nodes().find((n) => n.id === activeId) ?? null;
+    const activeIds = this.activeSimulationNodeIds();
+    if (activeIds.size === 0) return null;
+    const runningNodes = this.nodes().filter((n) => activeIds.has(n.id));
+    if (runningNodes.length === 0) return null;
+    if (runningNodes.length === 1) return runningNodes[0];
+    return {
+      ...runningNodes[0],
+      agentName: runningNodes.map((n) => n.agentName).join(' & ')
+    };
+  });
+
+  // Berechnet für jeden Knoten seine logische Schritt-Stufe (1-basiert, parallele Knoten = gleiche Stufe)
+  readonly nodeStepNumbers = computed(() => {
+    const levels = this.computeExecutionLayers(this.nodes(), this.edges());
+    const map = new Map<string, number>();
+    levels.forEach((levelNodes, levelIdx) => {
+      for (const node of levelNodes) {
+        map.set(node.id, levelIdx + 1);
+      }
+    });
+    return map;
   });
 
   // State für das Verschieben von Knoten auf dem Canvas
@@ -100,11 +119,11 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   readonly getInitials = getInitials;
   readonly getAvatarBg = getAvatarColor;
 
-  // Berechnete SVG-Pfade für alle Verbindungen inkl. Simulations-Status
+  // Berechnete SVG-Pfade für alle Verbindungen inkl. exakter Port-Zentrierung & Simulations-Status
   readonly renderedEdges = computed(() => {
     const currentNodes = this.nodes();
     const currentEdges = this.edges();
-    const activeId = this.activeSimulationNodeId();
+    const activeIds = this.activeSimulationNodeIds();
     const completedIds = this.completedSimulationNodeIds();
 
     return currentEdges
@@ -113,13 +132,15 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
         const target = currentNodes.find((n) => n.id === edge.targetNodeId);
         if (!source || !target) return null;
 
+        // Exakte Mitte des rechten Output-Ports bzw. linken Input-Ports
         const startX = source.x + this.NODE_WIDTH;
         const startY = source.y + this.NODE_HEIGHT / 2;
-        const endX = target.x;
+        const endX = target.x - this.PORT_RADIUS;
         const endY = target.y + this.NODE_HEIGHT / 2;
 
         const isEdgeActive =
-          completedIds.has(edge.sourceNodeId) && activeId === edge.targetNodeId;
+          completedIds.has(edge.sourceNodeId) &&
+          this.activeSimulationNodeIds().has(edge.targetNodeId);
         const isEdgeCompleted =
           completedIds.has(edge.sourceNodeId) && completedIds.has(edge.targetNodeId);
 
@@ -162,7 +183,7 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   }
 
   // ===========================================================================
-  // WORKFLOW-SIMULATION (START / STOPP / SCHRITT-DURCHLAUF)
+  // WORKFLOW-SIMULATION (START / STOPP / PARALLELER STUFEN-DURCHLAUF)
   // ===========================================================================
 
   toggleSimulation(): void {
@@ -182,14 +203,14 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     this.simulationFinished.set(false);
     this.completedSimulationNodeIds.set(new Set());
 
-    const orderedNodes = this.computeExecutionOrder(currentNodes, this.edges());
-    this.runSimulationStep(orderedNodes, 0);
+    const executionLayers = this.computeExecutionLayers(currentNodes, this.edges());
+    this.runSimulationLayer(executionLayers, 0);
   }
 
   stopSimulation(resetHighlights = true): void {
     this.clearSimulationTimers();
     this.isSimulating.set(false);
-    this.activeSimulationNodeId.set(null);
+    this.activeSimulationNodeIds.set(new Set());
 
     if (resetHighlights) {
       this.simulationFinished.set(false);
@@ -198,23 +219,29 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   }
 
   isNodeRunning(nodeId: string): boolean {
-    return this.activeSimulationNodeId() === nodeId;
+    return this.activeSimulationNodeIds().has(nodeId);
   }
 
   isNodeCompleted(nodeId: string): boolean {
     return this.completedSimulationNodeIds().has(nodeId);
   }
 
-  private runSimulationStep(orderedNodes: WorkflowNode[], index: number): void {
+  getNodeStepNumber(nodeId: string, fallbackIndex: number): number {
+    return this.nodeStepNumbers().get(nodeId) ?? fallbackIndex + 1;
+  }
+
+  /**
+   * Führt alle Knoten einer topologischen Stufe (Level) gleichzeitig/parallel aus.
+   * Sobald alle Knoten dieser Stufe fertig sind, starten alle Knoten der nächsten Stufe.
+   */
+  private runSimulationLayer(layers: WorkflowNode[][], layerIndex: number): void {
     if (!this.isSimulating()) return;
 
-    // Alle Knoten wurden erfolgreich durchlaufen
-    if (index >= orderedNodes.length) {
-      this.activeSimulationNodeId.set(null);
+    if (layerIndex >= layers.length) {
+      this.activeSimulationNodeIds.set(new Set());
       this.isSimulating.set(false);
       this.simulationFinished.set(true);
 
-      // Nach 4 Sekunden die grünen Abschluss-Markierungen automatisch zurücksetzen
       this.finishResetTimerId = setTimeout(() => {
         this.simulationFinished.set(false);
         this.completedSimulationNodeIds.set(new Set());
@@ -222,24 +249,25 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
       return;
     }
 
-    const currentNode = orderedNodes[index];
-    this.activeSimulationNodeId.set(currentNode.id);
+    const currentLayer = layers[layerIndex];
+    const currentLayerIds = new Set(currentLayer.map((n) => n.id));
+    this.activeSimulationNodeIds.set(currentLayerIds);
 
     this.simulationTimerId = setTimeout(() => {
       this.completedSimulationNodeIds.update((prev) => {
         const next = new Set(prev);
-        next.add(currentNode.id);
+        currentLayer.forEach((n) => next.add(n.id));
         return next;
       });
-      this.runSimulationStep(orderedNodes, index + 1);
+      this.runSimulationLayer(layers, layerIndex + 1);
     }, this.SIMULATION_STEP_MS);
   }
 
   /**
-   * Ermittelt die Ausführungsreihenfolge anhand der gerichteten Verbindungen (Topologische Sortierung)
-   * mit Fallback auf die horizontale Position (x-Koordinate).
+   * Gruppiert die Knoten topologisch in parallele Ausführungsstufen (Kahn-Algorithmus in Schichten).
+   * Alle Knoten einer Stufe starten exakt gleichzeitig.
    */
-  private computeExecutionOrder(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[] {
+  private computeExecutionLayers(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
     const inDegree = new Map<string, number>();
     const adjacency = new Map<string, string[]>();
 
@@ -258,40 +286,39 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     const sortByPosition = (a: WorkflowNode, b: WorkflowNode) =>
       a.x !== b.x ? a.x - b.x : a.y - b.y;
 
-    const available = nodes
+    let currentWave = nodes
       .filter((n) => (inDegree.get(n.id) ?? 0) === 0)
       .sort(sortByPosition);
 
-    const result: WorkflowNode[] = [];
+    const layers: WorkflowNode[][] = [];
     const visited = new Set<string>();
 
-    while (available.length > 0) {
-      const current = available.shift()!;
-      if (visited.has(current.id)) continue;
+    while (currentWave.length > 0) {
+      layers.push(currentWave);
+      const nextWave: WorkflowNode[] = [];
 
-      visited.add(current.id);
-      result.push(current);
-
-      const neighbors = adjacency.get(current.id) ?? [];
-      for (const targetId of neighbors) {
-        inDegree.set(targetId, (inDegree.get(targetId) ?? 1) - 1);
-        if (inDegree.get(targetId) === 0 && !visited.has(targetId)) {
-          const targetNode = nodes.find((n) => n.id === targetId);
-          if (targetNode) {
-            available.push(targetNode);
-            available.sort(sortByPosition);
+      for (const node of currentWave) {
+        visited.add(node.id);
+        for (const targetId of adjacency.get(node.id) ?? []) {
+          inDegree.set(targetId, (inDegree.get(targetId) ?? 1) - 1);
+          if (inDegree.get(targetId) === 0 && !visited.has(targetId)) {
+            const targetNode = nodes.find((n) => n.id === targetId);
+            if (targetNode) {
+              nextWave.push(targetNode);
+            }
           }
         }
       }
+
+      currentWave = nextWave.sort(sortByPosition);
     }
 
-    // Falls Zyklen existieren, restliche Knoten nach Position anhängen
-    if (result.length < nodes.length) {
+    if (visited.size < nodes.length) {
       const remaining = nodes.filter((n) => !visited.has(n.id)).sort(sortByPosition);
-      result.push(...remaining);
+      layers.push(remaining);
     }
 
-    return result;
+    return layers;
   }
 
   private clearSimulationTimers(): void {
@@ -321,20 +348,37 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   }
 
   onSaveWorkflow(): void {
-    const saved = this.workflowService.saveWorkflow({
-      id: this.workflowId(),
-      name: this.workflowName(),
-      nodes: this.nodes(),
-      edges: this.edges(),
-      updatedAt: new Date().toISOString()
+    this.workflowService
+      .saveWorkflow({
+        id: this.workflowId(),
+        name: this.workflowName(),
+        nodes: this.nodes(),
+        edges: this.edges(),
+        updatedAt: new Date().toISOString()
+      })
+      .subscribe({
+        next: (saved) => {
+          const executionPayload = this.workflowService.buildExecutionPlan(saved);
+          console.info(
+            '[Trinity Workflow Engine] Saved to Backend & Prepared Execution Payload:',
+            executionPayload
+          );
+          this.saveSuccessToast.set(true);
+          setTimeout(() => this.saveSuccessToast.set(false), 2500);
+        },
+        error: (err) => {
+          console.error('Fehler beim Speichern des Workflows im Backend:', err);
+        }
+      });
+  }
+
+  onDeleteWorkflow(): void {
+    const id = this.workflowId();
+    if (!id) return;
+    this.stopSimulation(true);
+    this.workflowService.deleteWorkflow(id).subscribe({
+      error: (err) => console.error('Fehler beim Löschen des Workflows:', err)
     });
-
-    // Vorbereitete Task-Chain-Übersetzung für das Backend in der Konsole ausgeben
-    const executionPayload = this.workflowService.buildExecutionPlan(saved);
-    console.info('[Trinity Workflow Engine] Prepared Backend Execution Payload:', executionPayload);
-
-    this.saveSuccessToast.set(true);
-    setTimeout(() => this.saveSuccessToast.set(false), 2500);
   }
 
   onClearCanvas(): void {
@@ -430,7 +474,6 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   // ===========================================================================
 
   onNodeMouseDown(event: MouseEvent, node: WorkflowNode): void {
-    // Ignorieren, falls auf einen Port oder den Löschen-Button geklickt wurde
     const targetEl = event.target as HTMLElement;
     if (targetEl.closest('.node-port') || targetEl.closest('.node-delete-btn')) {
       return;
@@ -478,8 +521,6 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
 
   @HostListener('window:mouseup')
   onWindowMouseUp(): void {
-    // Wenn ein Knoten verschoben wurde und sich im Snap-Radius eines anderen befindet:
-    // Einrasten & automatisch verbinden!
     if (this.draggingNodeId) {
       const movedNode = this.nodes().find((n) => n.id === this.draggingNodeId);
       const snapTargetId = this.snapTargetNodeId();
@@ -501,7 +542,6 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
       this.snapTargetNodeId.set(null);
     }
 
-    // Wenn eine manuelle Verbindungslinie gezogen wurde:
     const conn = this.activeConnection();
     if (conn) {
       const targetId = this.hoveredTargetPortNodeId();
@@ -556,7 +596,6 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
       return;
     }
 
-    // Nur öffnen, wenn die Karte angeklickt und nicht verschoben wurde
     if (this.hasDraggedNode) {
       this.hasDraggedNode = false;
       return;
@@ -618,7 +657,7 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     this.edges.update((list) => [...list, newEdge]);
   }
 
-  private hasAnyConnectionBetween(nodeAId: string, nodeBId: string): void | boolean {
+  private hasAnyConnectionBetween(nodeAId: string, nodeBId: string): boolean {
     return this.edges().some(
       (e) =>
         (e.sourceNodeId === nodeAId && e.targetNodeId === nodeBId) ||
@@ -654,8 +693,8 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   private getCanvasCoords(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.canvasRef.nativeElement.getBoundingClientRect();
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: clientX - rect.left + this.canvasRef.nativeElement.scrollLeft,
+      y: clientY - rect.top + this.canvasRef.nativeElement.scrollTop
     };
   }
 

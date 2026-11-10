@@ -114,35 +114,35 @@
         <marker
           id="workflow-arrow"
           viewBox="0 0 10 10"
-          refX="8"
+          refX="9"
           refY="5"
           markerWidth="7"
           markerHeight="7"
           orient="auto-start-reverse"
         >
-          <path d="M 0 1.5 L 8 5 L 0 8.5 z" class="arrow-marker-path" />
+          <path d="M 0 1.5 L 9 5 L 0 8.5 z" class="arrow-marker-path" />
         </marker>
         <marker
           id="workflow-arrow-active"
           viewBox="0 0 10 10"
-          refX="8"
+          refX="9"
           refY="5"
           markerWidth="7"
           markerHeight="7"
           orient="auto-start-reverse"
         >
-          <path d="M 0 1.5 L 8 5 L 0 8.5 z" class="arrow-marker-active-path" />
+          <path d="M 0 1.5 L 9 5 L 0 8.5 z" class="arrow-marker-active-path" />
         </marker>
         <marker
           id="workflow-arrow-running"
           viewBox="0 0 10 10"
-          refX="8"
+          refX="9"
           refY="5"
           markerWidth="7"
           markerHeight="7"
           orient="auto-start-reverse"
         >
-          <path d="M 0 1.5 L 8 5 L 0 8.5 z" class="arrow-marker-running-path" />
+          <path d="M 0 1.5 L 9 5 L 0 8.5 z" class="arrow-marker-running-path" />
         </marker>
       </defs>
 
@@ -221,7 +221,7 @@
 
           <div class="node-title-wrap">
             <div class="node-step-row">
-              <span class="node-step-label">Schritt {{ idx + 1 }}</span>
+              <span class="node-step-label">Schritt {{ getNodeStepNumber(node.id, idx) }}</span>
 
               @if (isNodeRunning(node.id)) {
                 <span class="node-sim-badge running">Arbeitet…</span>
@@ -272,11 +272,11 @@
 
   <!-- FLOATING ACTION BUTTON (FAB) UNTEN RECHTS ZUM STARTEN/STOPPEN DES WORKFLOWS -->
   <div class="workflow-run-controls">
-    @if (isSimulating() && activeSimulationNode(); as currentAgent) {
+    @if (isSimulating() && activeSimulationNode(); as activeNode) {
       <div class="simulation-status-pill running">
         <span class="pulse-dot"></span>
         <span>
-          <strong>{{ currentAgent.agentName }}</strong> führt Schritt aus…
+          <strong>{{ activeNode.agentName }}</strong> führt Schritt aus…
         </span>
       </div>
     } @else if (simulationFinished()) {

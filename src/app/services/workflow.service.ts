@@ -1,8 +1,9 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, tap } from 'rxjs';
 import {
   WorkflowGraph,
   WorkflowNode,
-  WorkflowEdge,
   WorkflowExecutionPayload,
   WorkflowExecutionStep
 } from '../models/workflow.model';
@@ -11,29 +12,50 @@ import {
   providedIn: 'root'
 })
 export class WorkflowService {
-  private readonly STORAGE_KEY = 'trinity_saved_workflows';
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = '/api/v1/workflows';
 
-  // Signal für alle gespeicherten Workflows (für die Dropdown-Auswahlliste oben)
-  readonly workflows = signal<WorkflowGraph[]>(this.loadFromStorage());
+  // Signal für alle gespeicherten Workflows aus dem Backend
+  readonly workflows = signal<WorkflowGraph[]>([]);
 
   // Signal für den aktuell im Canvas geöffneten Workflow
   readonly activeWorkflow = signal<WorkflowGraph>(this.createEmptyWorkflow());
 
   readonly activeWorkflowId = computed(() => this.activeWorkflow().id);
 
+  // Lade-Status
+  readonly isLoading = signal<boolean>(false);
+
   constructor() {
-    const existing = this.workflows();
-    if (existing.length > 0) {
-      this.activeWorkflow.set(structuredClone(existing[0]));
-    }
+    this.loadWorkflows();
   }
 
   /**
-   * Erzeugt einen neuen, leeren Workflow im Editor.
+   * Lädt alle gespeicherten Workflows vom Flask-Backend.
+   */
+  loadWorkflows(): void {
+    this.isLoading.set(true);
+    this.http.get<WorkflowGraph[]>(this.apiUrl).subscribe({
+      next: (list) => {
+        this.workflows.set(list);
+        if (list.length > 0 && !this.activeWorkflow().id && this.activeWorkflow().nodes.length === 0) {
+          this.activeWorkflow.set(structuredClone(list[0]));
+        }
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Fehler beim Laden der Workflows vom Backend:', err);
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  /**
+   * Erzeugt einen neuen, leeren Workflow-Entwurf (noch ohne Backend-ID).
    */
   createEmptyWorkflow(name = 'Unbenannter Workflow'): WorkflowGraph {
     return {
-      id: crypto.randomUUID(),
+      id: '',
       name,
       nodes: [],
       edges: [],
@@ -55,55 +77,68 @@ export class WorkflowService {
     const found = this.workflows().find((w) => w.id === id);
     if (found) {
       this.activeWorkflow.set(structuredClone(found));
+    } else {
+      this.http.get<WorkflowGraph>(`${this.apiUrl}/${id}`).subscribe({
+        next: (wf) => this.activeWorkflow.set(structuredClone(wf)),
+        error: (err) => console.error(`Workflow ${id} konnte nicht geladen werden:`, err)
+      });
     }
   }
 
   /**
-   * Speichert den aktuellen Workflow (Upsert) und bereitet den Backend-Call vor.
+   * Erstellt einen neuen Workflow (POST /api/v1/workflows) oder
+   * aktualisiert einen bestehenden Workflow (PUT /api/v1/workflows/<id>).
    */
-  saveWorkflow(graph: WorkflowGraph): WorkflowGraph {
-    const updatedGraph: WorkflowGraph = {
+  saveWorkflow(graph: WorkflowGraph): Observable<WorkflowGraph> {
+    const payload: WorkflowGraph = {
       ...structuredClone(graph),
       name: graph.name.trim() || 'Unbenannter Workflow',
       updatedAt: new Date().toISOString()
     };
 
-    this.workflows.update((list) => {
-      const idx = list.findIndex((w) => w.id === updatedGraph.id);
-      if (idx >= 0) {
-        const copy = [...list];
-        copy[idx] = updatedGraph;
-        return copy;
-      }
-      return [updatedGraph, ...list];
-    });
+    const isExisting =
+      Boolean(payload.id) && this.workflows().some((w) => w.id === payload.id);
 
-    this.activeWorkflow.set(structuredClone(updatedGraph));
-    this.persistToStorage();
+    const request$ = isExisting
+      ? this.http.put<WorkflowGraph>(`${this.apiUrl}/${payload.id}`, payload)
+      : this.http.post<WorkflowGraph>(this.apiUrl, payload);
 
-    // TODO (Backend v0.3.4): Späterer API-Call an das Flask-Backend
-    // return this.http.post<WorkflowGraph>('/api/v1/workflows', updatedGraph);
-    return updatedGraph;
+    return request$.pipe(
+      tap((savedGraph) => {
+        this.workflows.update((list) => {
+          const idx = list.findIndex((w) => w.id === savedGraph.id);
+          if (idx >= 0) {
+            const copy = [...list];
+            copy[idx] = savedGraph;
+            return copy;
+          }
+          return [savedGraph, ...list];
+        });
+        this.activeWorkflow.set(structuredClone(savedGraph));
+      })
+    );
   }
 
   /**
-   * Löscht einen gespeicherten Workflow.
+   * Löscht einen gespeicherten Workflow im Flask-Backend (DELETE /api/v1/workflows/<id>).
    */
-  deleteWorkflow(id: string): void {
-    this.workflows.update((list) => list.filter((w) => w.id !== id));
-    this.persistToStorage();
-
-    if (this.activeWorkflow().id === id) {
-      const remaining = this.workflows();
-      this.activeWorkflow.set(
-        remaining.length > 0 ? structuredClone(remaining[0]) : this.createEmptyWorkflow()
-      );
-    }
+  deleteWorkflow(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
+      tap(() => {
+        this.workflows.update((list) => list.filter((w) => w.id !== id));
+        if (this.activeWorkflow().id === id) {
+          const remaining = this.workflows();
+          this.activeWorkflow.set(
+            remaining.length > 0 ? structuredClone(remaining[0]) : this.createEmptyWorkflow()
+          );
+        }
+      })
+    );
   }
 
   /**
    * Übersetzt den visuellen Graphen (Nodes + Edges) topologisch in eine
-   * sequenzielle Task-Chain für das Flask-Backend (`message_agent`).
+   * Task-Chain für das Flask-Backend.
    */
   buildExecutionPlan(graph: WorkflowGraph = this.activeWorkflow()): WorkflowExecutionPayload {
     const nodesMap = new Map<string, WorkflowNode>(graph.nodes.map((n) => [n.id, n]));
@@ -122,7 +157,6 @@ export class WorkflowService {
       }
     }
 
-    // Startknoten (ohne eingehende Kante), sortiert nach X-Koordinate (links nach rechts)
     const queue = graph.nodes
       .filter((n) => (inDegree.get(n.id) || 0) === 0)
       .sort((a, b) => a.x - b.x)
@@ -147,7 +181,6 @@ export class WorkflowService {
       }
     }
 
-    // Falls Zyklen existieren, restliche Knoten anhängen
     for (const node of graph.nodes) {
       if (!visited.has(node.id)) {
         orderedNodes.push(node);
@@ -159,15 +192,18 @@ export class WorkflowService {
       const stepNum = index + 1;
       nodeStepIndex.set(node.id, stepNum);
 
-      const incomingEdge = graph.edges.find((e) => e.targetNodeId === node.id);
-      const dependsOnStep = incomingEdge ? nodeStepIndex.get(incomingEdge.sourceNodeId) : undefined;
+      const incomingEdges = graph.edges.filter((e) => e.targetNodeId === node.id);
+      const dependsOnSteps = incomingEdges
+        .map((e) => nodeStepIndex.get(e.sourceNodeId))
+        .filter((s): s is number => s !== undefined);
 
       return {
         step: stepNum,
         node_id: node.id,
         agent_id: node.agentId,
         prompt: node.prompt,
-        ...(dependsOnStep ? { depends_on_step: dependsOnStep } : {})
+        ...(dependsOnSteps.length > 0 ? { depends_on_step: dependsOnSteps[0] } : {}),
+        ...(dependsOnSteps.length > 1 ? { depends_on_steps: dependsOnSteps } : {})
       };
     });
 
@@ -176,21 +212,5 @@ export class WorkflowService {
       workflow_name: graph.name,
       steps
     };
-  }
-
-  private loadFromStorage(): WorkflowGraph[] {
-    try {
-      const raw = localStorage.getItem(this.STORAGE_KEY);
-      if (raw) {
-        return JSON.parse(raw);
-      }
-    } catch {
-      // Fallback bei fehlerhaftem JSON
-    }
-    return [];
-  }
-
-  private persistToStorage(): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.workflows()));
   }
 }
