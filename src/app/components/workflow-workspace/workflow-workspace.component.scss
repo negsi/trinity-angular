@@ -20,18 +20,18 @@
   --wf-accent-glow: rgba(99, 102, 241, 0.35);
 
   &.light-mode {
-    --wf-bg: #eef2f6; /* Kühles Hellgrau -> weiße Karten heben sich stark ab */
-    --wf-dot: rgba(15, 23, 42, 0.22); /* Rasterpunkte besser sichtbar */
+    --wf-bg: #eef2f6;
+    --wf-dot: rgba(15, 23, 42, 0.22);
     --wf-toolbar-bg: #ffffff;
-    --wf-border: #cbd5e1; /* Klarere Trennlinien in Toolbar & Inputs */
+    --wf-border: #cbd5e1;
     --wf-card-bg: #ffffff;
-    --wf-card-border: #cbd5e1; /* Sauberer, sichtbarer Kartenrand */
+    --wf-card-border: #cbd5e1;
     --wf-card-hover-border: #4f46e5;
-    --wf-card-shadow: 
+    --wf-card-shadow:
       0 10px 25px -5px rgba(15, 23, 42, 0.14),
       0 4px 10px -2px rgba(15, 23, 42, 0.08),
-      0 0 0 1px rgba(15, 23, 42, 0.05); /* Feine Kontur + tieferer Schatten */
-    --wf-card-hover-shadow: 
+      0 0 0 1px rgba(15, 23, 42, 0.05);
+    --wf-card-hover-shadow:
       0 18px 32px -6px rgba(79, 70, 229, 0.18),
       0 6px 14px -2px rgba(15, 23, 42, 0.1),
       0 0 0 1px rgba(79, 70, 229, 0.3);
@@ -41,6 +41,7 @@
     --wf-accent-glow: rgba(79, 70, 229, 0.22);
   }
 
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -129,7 +130,9 @@
   font-weight: 500;
   min-width: 220px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 
   &:focus {
     border-color: var(--wf-accent);
@@ -288,6 +291,10 @@
     fill: #10b981;
   }
 
+  .arrow-marker-running-path {
+    fill: #f59e0b;
+  }
+
   .edge-group {
     pointer-events: stroke;
     cursor: pointer;
@@ -302,7 +309,21 @@
       fill: none;
       stroke: var(--wf-accent);
       stroke-width: 2.5px;
-      transition: stroke 0.15s, stroke-width 0.15s;
+      transition:
+        stroke 0.2s,
+        stroke-width 0.2s;
+    }
+
+    &.edge-sim-running .edge-path {
+      stroke: #f59e0b;
+      stroke-width: 3.2px;
+      stroke-dasharray: 8 5;
+      animation: wf-edge-flow 0.6s linear infinite;
+    }
+
+    &.edge-sim-completed .edge-path {
+      stroke: #10b981;
+      stroke-width: 3px;
     }
 
     .edge-delete-badge {
@@ -342,7 +363,7 @@
 }
 
 /* ============================================================================
-   AGENTEN-KNOTEN (VIERECK MIT SCHLAGSCHATTEN & PORTS)
+   AGENTEN-KNOTEN (VIERECK MIT SCHLAGSCHATTEN, PORTS & SIMULATIONS-HIGHLIGHT)
    ============================================================================ */
 .workflow-node-card {
   position: absolute;
@@ -360,7 +381,10 @@
   justify-content: space-between;
   cursor: grab;
   z-index: 5;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    background-color 0.25s ease;
 
   &:hover {
     border-color: var(--wf-card-hover-border);
@@ -368,7 +392,7 @@
   }
 
   &:active {
-    cursor: grabbing;
+    cursor: grab;
   }
 
   &.has-prompt {
@@ -378,7 +402,42 @@
   &.snap-highlight,
   &.port-target-highlight {
     border-color: #10b981;
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25), var(--wf-card-shadow);
+    box-shadow:
+      0 0 0 4px rgba(16, 185, 129, 0.25),
+      var(--wf-card-shadow);
+  }
+
+  /* Aktiver Agent während der Workflow-Simulation */
+  &.sim-running {
+    border: 2px solid #f59e0b;
+    border-left: 5px solid #f59e0b;
+    z-index: 8;
+    animation: wf-node-pulse 1.4s ease-in-out infinite;
+
+    .node-step-label {
+      color: #f59e0b;
+    }
+
+    .node-port {
+      border-color: #f59e0b;
+    }
+  }
+
+  /* Bereits erfolgreich durchlaufener Agent */
+  &.sim-completed {
+    border-color: #10b981;
+    border-left: 4px solid #10b981;
+    box-shadow:
+      0 0 0 3px rgba(16, 185, 129, 0.2),
+      var(--wf-card-shadow);
+
+    .node-step-label {
+      color: #10b981;
+    }
+
+    .node-port {
+      border-color: #10b981;
+    }
   }
 }
 
@@ -406,11 +465,25 @@
     height: 42px;
     font-size: 0.95rem;
   }
+
+  .avatar-spin-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    animation: wf-spin 1.1s linear infinite;
+  }
 }
 
 .node-title-wrap {
   flex: 1;
   min-width: 0;
+
+  .node-step-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+  }
 
   .node-step-label {
     display: block;
@@ -431,6 +504,33 @@
   }
 }
 
+.node-sim-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+
+  &.running {
+    background-color: rgba(245, 158, 11, 0.18);
+    color: #f59e0b;
+  }
+
+  &.completed {
+    background-color: rgba(16, 185, 129, 0.16);
+    color: #10b981;
+
+    mat-icon {
+      font-size: 11px;
+      width: 11px;
+      height: 11px;
+    }
+  }
+}
+
 .node-delete-btn {
   background: transparent;
   border: none;
@@ -442,7 +542,10 @@
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    background-color 0.15s;
 
   mat-icon {
     font-size: 16px;
@@ -508,7 +611,10 @@
   border: 2.5px solid var(--wf-accent);
   transform: translateY(-50%);
   cursor: crosshair;
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.2s ease;
   z-index: 6;
 
   &:hover {
@@ -522,6 +628,182 @@
 
   &.output-port {
     right: -7px;
+  }
+}
+
+/* ============================================================================
+   FLOATING ACTION BUTTON (FAB) & SIMULATIONS-STATUS UNTEN RECHTS
+   ============================================================================ */
+.workflow-run-controls {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 25;
+}
+
+.simulation-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background-color: var(--wf-toolbar-bg);
+  border: 1px solid var(--wf-border);
+  box-shadow: var(--wf-card-shadow);
+  font-size: 0.84rem;
+  color: var(--wf-text-main);
+
+  &.running {
+    border-color: rgba(245, 158, 11, 0.5);
+
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #f59e0b;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.25);
+      animation: wf-dot-blink 1s ease-in-out infinite;
+    }
+  }
+
+  &.finished {
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #10b981;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+.workflow-fab-btn {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 10px 25px -4px rgba(16, 185, 129, 0.5),
+    0 4px 10px rgba(0, 0, 0, 0.3);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
+
+  mat-icon {
+    font-size: 30px;
+    width: 30px;
+    height: 30px;
+  }
+
+  &:hover:not(:disabled) {
+    transform: scale(1.08);
+    box-shadow:
+      0 14px 30px -4px rgba(16, 185, 129, 0.65),
+      0 6px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+    background: #64748b;
+  }
+
+  &.is-running {
+    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+    box-shadow:
+      0 10px 25px -4px rgba(239, 68, 68, 0.55),
+      0 4px 10px rgba(0, 0, 0, 0.3);
+
+    &:hover:not(:disabled) {
+      box-shadow:
+        0 14px 30px -4px rgba(239, 68, 68, 0.7),
+        0 6px 14px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  .fab-pulse-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2.5px solid #f59e0b;
+    opacity: 0.75;
+    pointer-events: none;
+    animation: wf-fab-ring 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+}
+
+/* ============================================================================
+   KEYFRAME-ANIMATIONEN FÜR DIE SIMULATION
+   ============================================================================ */
+@keyframes wf-node-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 4px rgba(245, 158, 11, 0.28),
+      0 14px 30px -6px rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9px rgba(245, 158, 11, 0.12),
+      0 18px 36px -4px rgba(245, 158, 11, 0.55);
+  }
+}
+
+@keyframes wf-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wf-edge-flow {
+  from {
+    stroke-dashoffset: 26;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes wf-fab-ring {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.28);
+    opacity: 0;
+  }
+}
+
+@keyframes wf-dot-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
   }
 }
 

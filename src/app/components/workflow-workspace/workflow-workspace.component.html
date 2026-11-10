@@ -16,7 +16,9 @@
           (ngModelChange)="onSelectSavedWorkflow($event)"
           title="Gespeicherten Workflow laden"
         >
-          <option value="" disabled>Gespeicherte Workflows ({{ workflowService.workflows().length }})</option>
+          <option value="" disabled>
+            Gespeicherte Workflows ({{ workflowService.workflows().length }})
+          </option>
           @for (wf of workflowService.workflows(); track wf.id) {
             <option [value]="wf.id">{{ wf.name }} ({{ wf.nodes.length }} Agenten)</option>
           }
@@ -131,17 +133,39 @@
         >
           <path d="M 0 1.5 L 8 5 L 0 8.5 z" class="arrow-marker-active-path" />
         </marker>
+        <marker
+          id="workflow-arrow-running"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" class="arrow-marker-running-path" />
+        </marker>
       </defs>
 
       <!-- Bestehende Verbindungen -->
       @for (edge of renderedEdges(); track edge.id) {
-        <g class="edge-group" (click)="removeEdge($event, edge.id)">
+        <g
+          class="edge-group"
+          [class.edge-sim-running]="edge.isEdgeActive"
+          [class.edge-sim-completed]="edge.isEdgeCompleted"
+          (click)="removeEdge($event, edge.id)"
+        >
           <!-- Unsichtbarer breiterer Klickpfad zum einfachen Löschen -->
           <path [attr.d]="edge.path" class="edge-hit-area" />
           <path
             [attr.d]="edge.path"
             class="edge-path"
-            marker-end="url(#workflow-arrow)"
+            [attr.marker-end]="
+              edge.isEdgeActive
+                ? 'url(#workflow-arrow-running)'
+                : edge.isEdgeCompleted
+                  ? 'url(#workflow-arrow-active)'
+                  : 'url(#workflow-arrow)'
+            "
           />
           <!-- Kleiner Löschen-Punkt in der Mitte der Verbindung (erscheint bei Hover) -->
           <g
@@ -171,6 +195,8 @@
         [class.snap-highlight]="snapTargetNodeId() === node.id"
         [class.port-target-highlight]="hoveredTargetPortNodeId() === node.id"
         [class.has-prompt]="!!node.prompt"
+        [class.sim-running]="isNodeRunning(node.id)"
+        [class.sim-completed]="isNodeCompleted(node.id)"
         [style.transform]="'translate(' + node.x + 'px, ' + node.y + 'px)'"
         (mousedown)="onNodeMouseDown($event, node)"
         (mouseenter)="onNodeMouseEnter(node)"
@@ -183,17 +209,29 @@
           matTooltip="Eingang (Verbindung hierher ziehen)"
         ></div>
 
-        <!-- Karten-Kopfzeile mit Avatar, Name und Löschen-Button -->
+        <!-- Karten-Kopfzeile mit Avatar, Name, Status-Badge und Löschen-Button -->
         <div class="node-card-header">
-          <div
-            class="node-avatar"
-            [style.background-color]="getAvatarBg(node.agentName)"
-          >
-            {{ getInitials(node.agentName) }}
+          <div class="node-avatar" [style.background-color]="getAvatarBg(node.agentName)">
+            @if (isNodeRunning(node.id)) {
+              <mat-icon class="avatar-spin-icon">autorenew</mat-icon>
+            } @else {
+              {{ getInitials(node.agentName) }}
+            }
           </div>
 
           <div class="node-title-wrap">
-            <span class="node-step-label">Schritt {{ idx + 1 }}</span>
+            <div class="node-step-row">
+              <span class="node-step-label">Schritt {{ idx + 1 }}</span>
+
+              @if (isNodeRunning(node.id)) {
+                <span class="node-sim-badge running">Arbeitet…</span>
+              } @else if (isNodeCompleted(node.id)) {
+                <span class="node-sim-badge completed">
+                  <mat-icon>check</mat-icon>
+                  Fertig
+                </span>
+              }
+            </div>
             <h4 class="node-agent-name">{{ node.agentName }}</h4>
           </div>
 
@@ -232,6 +270,46 @@
     }
   </div>
 
+  <!-- FLOATING ACTION BUTTON (FAB) UNTEN RECHTS ZUM STARTEN/STOPPEN DES WORKFLOWS -->
+  <div class="workflow-run-controls">
+    @if (isSimulating() && activeSimulationNode(); as currentAgent) {
+      <div class="simulation-status-pill running">
+        <span class="pulse-dot"></span>
+        <span>
+          <strong>{{ currentAgent.agentName }}</strong> führt Schritt aus…
+        </span>
+      </div>
+    } @else if (simulationFinished()) {
+      <div class="simulation-status-pill finished">
+        <mat-icon>verified</mat-icon>
+        <span>Workflow-Durchlauf abgeschlossen</span>
+      </div>
+    }
+
+    <button
+      type="button"
+      class="workflow-fab-btn"
+      [class.is-running]="isSimulating()"
+      [disabled]="nodes().length === 0"
+      (click)="toggleSimulation()"
+      [matTooltip]="
+        nodes().length === 0
+          ? 'Ziehe zuerst Agenten auf das Raster'
+          : isSimulating()
+            ? 'Workflow-Simulation stoppen'
+            : 'Workflow starten (Simulation)'
+      "
+      matTooltipPosition="left"
+    >
+      @if (isSimulating()) {
+        <span class="fab-pulse-ring"></span>
+        <mat-icon>stop</mat-icon>
+      } @else {
+        <mat-icon>play_arrow</mat-icon>
+      }
+    </button>
+  </div>
+
   <!-- MODAL-DIALOG FÜR DIE PROMPT-EINGABE BEI KLICK AUF EINEN KNOTEN -->
   @if (editingNode(); as activeNode) {
     <div class="prompt-modal-backdrop" (click)="closePromptModal()">
@@ -249,7 +327,6 @@
               <p>Definiere die Aufgabe, die dieser Agent im Workflow ausführen soll.</p>
             </div>
           </div>
-
           <button type="button" class="modal-close-btn" (click)="closePromptModal()">
             <mat-icon>close</mat-icon>
           </button>
@@ -267,7 +344,8 @@
             autofocus
           ></textarea>
           <span class="prompt-hint">
-            Tipp: Bei eingehenden Verbindungen wird das Ergebnis des Vorgänger-Agenten automatisch im Kontext übergeben.
+            Tipp: Bei eingehenden Verbindungen wird das Ergebnis des Vorgänger-Agenten automatisch
+            im Kontext übergeben.
           </span>
         </div>
 

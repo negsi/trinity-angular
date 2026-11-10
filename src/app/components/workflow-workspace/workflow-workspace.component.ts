@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   HostListener,
+  OnDestroy,
   ViewChild,
   computed,
   effect,
@@ -14,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+
 import { WorkflowService } from '../../services/workflow.service';
 import { WorkflowEdge, WorkflowNode } from '../../models/workflow.model';
 import { Agent } from '../../models/agent.model';
@@ -30,11 +32,17 @@ interface TempConnection {
 @Component({
   selector: 'app-workflow-workspace',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatIconModule,
+    MatButtonModule,
+    MatTooltipModule
+  ],
   templateUrl: './workflow-workspace.component.html',
   styleUrl: './workflow-workspace.component.scss'
 })
-export class WorkflowWorkspaceComponent {
+export class WorkflowWorkspaceComponent implements OnDestroy {
   @ViewChild('canvasRef', { static: true }) canvasRef!: ElementRef<HTMLDivElement>;
 
   readonly isLightMode = input.required<boolean>();
@@ -46,6 +54,7 @@ export class WorkflowWorkspaceComponent {
   readonly NODE_HEIGHT = 96;
   readonly SNAP_DISTANCE = 210; // Radius für Auto-Snap & Auto-Connect
   readonly AUTO_OFFSET_X = 280; // Abstand beim automatischen Einrasten rechts neben einem Knoten
+  readonly SIMULATION_STEP_MS = 2000; // Dauer pro Agenten-Schritt in der Simulation
 
   // Lokaler Arbeitszustand des aktuell geöffneten Workflows
   readonly workflowId = signal<string>('');
@@ -57,6 +66,21 @@ export class WorkflowWorkspaceComponent {
   readonly saveSuccessToast = signal<boolean>(false);
   readonly snapTargetNodeId = signal<string | null>(null);
   readonly dropPreviewPos = signal<{ x: number; y: number } | null>(null);
+
+  // State für die Workflow-Simulation
+  readonly isSimulating = signal<boolean>(false);
+  readonly simulationFinished = signal<boolean>(false);
+  readonly activeSimulationNodeId = signal<string | null>(null);
+  readonly completedSimulationNodeIds = signal<Set<string>>(new Set());
+  private simulationTimerId: ReturnType<typeof setTimeout> | null = null;
+  private finishResetTimerId: ReturnType<typeof setTimeout> | null = null;
+
+  // Aktuell laufender Knoten für das Status-Banner unten rechts
+  readonly activeSimulationNode = computed(() => {
+    const activeId = this.activeSimulationNodeId();
+    if (!activeId) return null;
+    return this.nodes().find((n) => n.id === activeId) ?? null;
+  });
 
   // State für das Verschieben von Knoten auf dem Canvas
   private draggingNodeId: string | null = null;
@@ -76,10 +100,12 @@ export class WorkflowWorkspaceComponent {
   readonly getInitials = getInitials;
   readonly getAvatarBg = getAvatarColor;
 
-  // Berechnete SVG-Pfade für alle Verbindungen
+  // Berechnete SVG-Pfade für alle Verbindungen inkl. Simulations-Status
   readonly renderedEdges = computed(() => {
     const currentNodes = this.nodes();
     const currentEdges = this.edges();
+    const activeId = this.activeSimulationNodeId();
+    const completedIds = this.completedSimulationNodeIds();
 
     return currentEdges
       .map((edge) => {
@@ -92,11 +118,18 @@ export class WorkflowWorkspaceComponent {
         const endX = target.x;
         const endY = target.y + this.NODE_HEIGHT / 2;
 
+        const isEdgeActive =
+          completedIds.has(edge.sourceNodeId) && activeId === edge.targetNodeId;
+        const isEdgeCompleted =
+          completedIds.has(edge.sourceNodeId) && completedIds.has(edge.targetNodeId);
+
         return {
           ...edge,
           path: this.buildBezierPath(startX, startY, endX, endY),
           midX: (startX + endX) / 2,
-          midY: (startY + endY) / 2
+          midY: (startY + endY) / 2,
+          isEdgeActive,
+          isEdgeCompleted
         };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null);
@@ -114,6 +147,7 @@ export class WorkflowWorkspaceComponent {
     effect(
       () => {
         const active = this.workflowService.activeWorkflow();
+        this.stopSimulation(true);
         this.workflowId.set(active.id);
         this.workflowName.set(active.name);
         this.nodes.set(structuredClone(active.nodes));
@@ -123,16 +157,166 @@ export class WorkflowWorkspaceComponent {
     );
   }
 
+  ngOnDestroy(): void {
+    this.clearSimulationTimers();
+  }
+
+  // ===========================================================================
+  // WORKFLOW-SIMULATION (START / STOPP / SCHRITT-DURCHLAUF)
+  // ===========================================================================
+
+  toggleSimulation(): void {
+    if (this.isSimulating()) {
+      this.stopSimulation(true);
+    } else {
+      this.startSimulation();
+    }
+  }
+
+  startSimulation(): void {
+    const currentNodes = this.nodes();
+    if (currentNodes.length === 0) return;
+
+    this.clearSimulationTimers();
+    this.isSimulating.set(true);
+    this.simulationFinished.set(false);
+    this.completedSimulationNodeIds.set(new Set());
+
+    const orderedNodes = this.computeExecutionOrder(currentNodes, this.edges());
+    this.runSimulationStep(orderedNodes, 0);
+  }
+
+  stopSimulation(resetHighlights = true): void {
+    this.clearSimulationTimers();
+    this.isSimulating.set(false);
+    this.activeSimulationNodeId.set(null);
+
+    if (resetHighlights) {
+      this.simulationFinished.set(false);
+      this.completedSimulationNodeIds.set(new Set());
+    }
+  }
+
+  isNodeRunning(nodeId: string): boolean {
+    return this.activeSimulationNodeId() === nodeId;
+  }
+
+  isNodeCompleted(nodeId: string): boolean {
+    return this.completedSimulationNodeIds().has(nodeId);
+  }
+
+  private runSimulationStep(orderedNodes: WorkflowNode[], index: number): void {
+    if (!this.isSimulating()) return;
+
+    // Alle Knoten wurden erfolgreich durchlaufen
+    if (index >= orderedNodes.length) {
+      this.activeSimulationNodeId.set(null);
+      this.isSimulating.set(false);
+      this.simulationFinished.set(true);
+
+      // Nach 4 Sekunden die grünen Abschluss-Markierungen automatisch zurücksetzen
+      this.finishResetTimerId = setTimeout(() => {
+        this.simulationFinished.set(false);
+        this.completedSimulationNodeIds.set(new Set());
+      }, 4000);
+      return;
+    }
+
+    const currentNode = orderedNodes[index];
+    this.activeSimulationNodeId.set(currentNode.id);
+
+    this.simulationTimerId = setTimeout(() => {
+      this.completedSimulationNodeIds.update((prev) => {
+        const next = new Set(prev);
+        next.add(currentNode.id);
+        return next;
+      });
+      this.runSimulationStep(orderedNodes, index + 1);
+    }, this.SIMULATION_STEP_MS);
+  }
+
+  /**
+   * Ermittelt die Ausführungsreihenfolge anhand der gerichteten Verbindungen (Topologische Sortierung)
+   * mit Fallback auf die horizontale Position (x-Koordinate).
+   */
+  private computeExecutionOrder(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[] {
+    const inDegree = new Map<string, number>();
+    const adjacency = new Map<string, string[]>();
+
+    for (const node of nodes) {
+      inDegree.set(node.id, 0);
+      adjacency.set(node.id, []);
+    }
+
+    for (const edge of edges) {
+      if (inDegree.has(edge.targetNodeId) && adjacency.has(edge.sourceNodeId)) {
+        inDegree.set(edge.targetNodeId, (inDegree.get(edge.targetNodeId) ?? 0) + 1);
+        adjacency.get(edge.sourceNodeId)!.push(edge.targetNodeId);
+      }
+    }
+
+    const sortByPosition = (a: WorkflowNode, b: WorkflowNode) =>
+      a.x !== b.x ? a.x - b.x : a.y - b.y;
+
+    const available = nodes
+      .filter((n) => (inDegree.get(n.id) ?? 0) === 0)
+      .sort(sortByPosition);
+
+    const result: WorkflowNode[] = [];
+    const visited = new Set<string>();
+
+    while (available.length > 0) {
+      const current = available.shift()!;
+      if (visited.has(current.id)) continue;
+
+      visited.add(current.id);
+      result.push(current);
+
+      const neighbors = adjacency.get(current.id) ?? [];
+      for (const targetId of neighbors) {
+        inDegree.set(targetId, (inDegree.get(targetId) ?? 1) - 1);
+        if (inDegree.get(targetId) === 0 && !visited.has(targetId)) {
+          const targetNode = nodes.find((n) => n.id === targetId);
+          if (targetNode) {
+            available.push(targetNode);
+            available.sort(sortByPosition);
+          }
+        }
+      }
+    }
+
+    // Falls Zyklen existieren, restliche Knoten nach Position anhängen
+    if (result.length < nodes.length) {
+      const remaining = nodes.filter((n) => !visited.has(n.id)).sort(sortByPosition);
+      result.push(...remaining);
+    }
+
+    return result;
+  }
+
+  private clearSimulationTimers(): void {
+    if (this.simulationTimerId !== null) {
+      clearTimeout(this.simulationTimerId);
+      this.simulationTimerId = null;
+    }
+    if (this.finishResetTimerId !== null) {
+      clearTimeout(this.finishResetTimerId);
+      this.finishResetTimerId = null;
+    }
+  }
+
   // ===========================================================================
   // TOP-TOOLBAR AKTIONEN (Laden, Neu, Speichern, Leeren)
   // ===========================================================================
 
   onSelectSavedWorkflow(workflowId: string): void {
     if (!workflowId) return;
+    this.stopSimulation(true);
     this.workflowService.selectWorkflow(workflowId);
   }
 
   onNewWorkflow(): void {
+    this.stopSimulation(true);
     this.workflowService.startNewWorkflow();
   }
 
@@ -154,6 +338,7 @@ export class WorkflowWorkspaceComponent {
   }
 
   onClearCanvas(): void {
+    this.stopSimulation(true);
     this.nodes.set([]);
     this.edges.set([]);
   }
@@ -206,6 +391,7 @@ export class WorkflowWorkspaceComponent {
     try {
       const agent: Agent = JSON.parse(rawData);
       const { x, y } = this.getCanvasCoords(event.clientX, event.clientY);
+
       let targetX = this.snapToGrid(x - this.NODE_WIDTH / 2);
       let targetY = this.snapToGrid(y - this.NODE_HEIGHT / 2);
 
@@ -419,7 +605,6 @@ export class WorkflowWorkspaceComponent {
 
   private addEdge(sourceNodeId: string, targetNodeId: string): void {
     if (sourceNodeId === targetNodeId) return;
-
     const exists = this.edges().some(
       (e) => e.sourceNodeId === sourceNodeId && e.targetNodeId === targetNodeId
     );
@@ -433,7 +618,7 @@ export class WorkflowWorkspaceComponent {
     this.edges.update((list) => [...list, newEdge]);
   }
 
-  private hasAnyConnectionBetween(nodeAId: string, nodeBId: string): boolean {
+  private hasAnyConnectionBetween(nodeAId: string, nodeBId: string): void | boolean {
     return this.edges().some(
       (e) =>
         (e.sourceNodeId === nodeAId && e.targetNodeId === nodeBId) ||
@@ -451,17 +636,14 @@ export class WorkflowWorkspaceComponent {
 
     for (const node of this.nodes()) {
       if (node.id === excludeNodeId) continue;
-
       const dx = x - node.x;
       const dy = y - node.y;
       const distance = Math.hypot(dx, dy);
-
       if (distance < minDistance) {
         minDistance = distance;
         closest = node;
       }
     }
-
     return closest;
   }
 

@@ -12,10 +12,12 @@ Here is the updated changelog entry in English:
 
 - Added workflow workspace tab (`workflows`) to the navigation sidebar and main layout (`AppComponent`, `SidebarComponent`).
 - Added HTML5 drag-and-drop support (`application/trinity-agent`) for agents in `AgentListComponent` to allow dragging agents onto the workflow canvas.
+- Added interactive workflow execution simulation in `WorkflowWorkspaceComponent` with topological execution ordering, animated node/edge status indicators (`running`, `completed`), status pills, and a floating action button (FAB) to start/stop runs.
 
 ### Changed
 
 - Updated `AppComponent` and `SidebarComponent` to support switching between the chat workspace and the workflow builder view.
+- Removed obsolete `concat_code.py` codebase aggregation utility script.
 
 # [0.3.1] - 2026-10-29
 
