@@ -14,10 +14,28 @@
 
   <!-- Navigation Icons -->
   <div class="nav-section">
-    <button mat-icon-button class="nav-item active" matTooltip="Inbox (12)">
+    <button
+      mat-icon-button
+      class="nav-item"
+      [class.active]="activeMainTab() === 'chat'"
+      matTooltip="Chat Workspace"
+      (click)="selectMainTab('chat')"
+    >
       <mat-icon>inbox</mat-icon>
       <span class="dot-badge"></span>
     </button>
+
+    <!-- NEUER TAB: WORKFLOWS -->
+    <button
+      mat-icon-button
+      class="nav-item"
+      [class.active]="activeMainTab() === 'workflows'"
+      matTooltip="Workflows (Grid Builder)"
+      (click)="selectMainTab('workflows')"
+    >
+      <mat-icon>account_tree</mat-icon>
+    </button>
+
     <button mat-icon-button class="nav-item" matTooltip="Starred">
       <mat-icon>star_border</mat-icon>
     </button>

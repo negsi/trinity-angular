@@ -2,11 +2,13 @@
   <!-- Column 1: Navigation Slim Sidebar -->
   <app-sidebar 
     [isLightMode]="isLightMode()" 
+    [activeMainTab]="activeMainTab()"
+    (mainTabChange)="activeMainTab.set($event)"
     (themeToggle)="toggleTheme()" 
     (createNewAgent)="onCreateNewAgent()"
   ></app-sidebar>
 
-  <!-- Column 2: Agent Directory List -->
+  <!-- Column 2: Agent Directory List (bleibt auch im Workflow-Modus sichtbar für Drag & Drop) -->
   <aside class="column col-subnav">
     <app-agent-list 
       [isLightMode]="isLightMode()"
@@ -14,9 +16,11 @@
     ></app-agent-list>
   </aside>
 
-  <!-- Column 3: Main Chat Workspace (Solo Mode vs. Crew Grid Mode) -->
+  <!-- Column 3: Main Workspace (Workflows vs. Chat Solo/Crew Mode) -->
   <main class="column col-main">
-    @if (viewMode() === 'single') {
+    @if (activeMainTab() === 'workflows') {
+      <app-workflow-workspace [isLightMode]="isLightMode()"></app-workflow-workspace>
+    } @else if (viewMode() === 'single') {
       <div class="solo-workspace-item">
         <app-chat-workspace [isLightMode]="isLightMode()"></app-chat-workspace>
       </div>

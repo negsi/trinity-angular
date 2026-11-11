@@ -11,6 +11,7 @@ export interface MessageAttachment {
   file_size: number;
   file_path?: string;
   message_id?: string;
+  url?: string;
 }
 
 export interface TaskPhase {
@@ -66,4 +67,10 @@ export interface ChatMessageUI {
 export interface MessageGroup {
   dateLabel: string;
   messages: ChatMessageUI[];
+}
+
+export interface MessageThought {
+  text?: string;
+  content?: string;
+  timestamp?: string;
 }

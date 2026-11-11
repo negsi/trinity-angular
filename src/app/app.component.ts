@@ -6,6 +6,8 @@ import { AgentConfigComponent } from './components/agent-config/agent-config.com
 import { FileWorkspaceComponent } from './components/file-workspace/file-workspace.component';
 import { RightSidebarComponent } from './components/right-sidebar/right-sidebar.component';
 import { ApiAgentService } from './services/agent.service';
+import { WorkflowWorkspaceComponent } from './components/workflow-workspace/workflow-workspace.component';
+import { MainWorkspaceTab } from './components/sidebar/sidebar.component';
 
 /**
  * Root Application Component providing the primary 3-column / multi-agent workspace layout.
@@ -19,7 +21,8 @@ import { ApiAgentService } from './services/agent.service';
     ChatWorkspaceComponent,
     AgentConfigComponent,
     FileWorkspaceComponent,
-    RightSidebarComponent
+    RightSidebarComponent,
+    WorkflowWorkspaceComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -49,6 +52,8 @@ export class AppComponent {
   readonly activeRightTab = signal<string>(this.getInitialActiveTab());
 
   private isResizing = false;
+
+  readonly activeMainTab = signal<MainWorkspaceTab>('chat');
 
   constructor() {
     effect(() => {

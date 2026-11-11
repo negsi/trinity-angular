@@ -1,0 +1,596 @@
+<div class="workflow-workspace-wrapper" [class.light-mode]="isLightMode()">
+  <!-- TOP TOOLBAR: Workflow-Auswahl, Name & Speichern -->
+  <header class="workflow-toolbar">
+    <div class="toolbar-left">
+      <div class="workflow-title-badge">
+        <mat-icon class="hub-icon">account_tree</mat-icon>
+        <span>Workflow</span>
+      </div>
+
+      <!-- Gespeicherte Workflows Dropdown -->
+      <div class="saved-workflows-select-wrapper">
+        <mat-icon class="select-icon">folder_open</mat-icon>
+        <select
+          class="workflow-select"
+          [ngModel]="workflowId()"
+          (ngModelChange)="onSelectSavedWorkflow($event)"
+          title="Gespeicherten Workflow laden"
+        >
+          <option value="" disabled>
+            Gespeicherte Workflows ({{ workflowService.workflows().length }})
+          </option>
+          @for (wf of workflowService.workflows(); track wf.id) {
+            <option [value]="wf.id">{{ wf.name }} ({{ wf.nodes.length }} Agenten)</option>
+          }
+        </select>
+      </div>
+
+      <!-- Aktueller Workflow-Name -->
+      <input
+        type="text"
+        class="workflow-name-input"
+        placeholder="Workflow-Name eingeben..."
+        [ngModel]="workflowName()"
+        (ngModelChange)="workflowName.set($event)"
+      />
+    </div>
+
+    <div class="toolbar-right">
+      @if (saveSuccessToast()) {
+        <span class="save-toast">
+          <mat-icon>check_circle</mat-icon>
+          Workflow gespeichert
+        </span>
+      }
+
+      <button
+        type="button"
+        class="toolbar-btn secondary"
+        (click)="onNewWorkflow()"
+        matTooltip="Neuen leeren Workflow anlegen"
+      >
+        <mat-icon>add</mat-icon>
+        <span>Neu</span>
+      </button>
+
+      <button
+        type="button"
+        class="toolbar-btn secondary"
+        (click)="onClearCanvas()"
+        [disabled]="nodes().length === 0"
+        matTooltip="Alle Knoten vom Raster entfernen"
+      >
+        <mat-icon>delete_sweep</mat-icon>
+        <span>Leeren</span>
+      </button>
+
+      <button
+        type="button"
+        class="toolbar-btn primary"
+        (click)="onSaveWorkflow()"
+        matTooltip="Workflow speichern"
+      >
+        <mat-icon>save</mat-icon>
+        <span>Speichern</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- INTERAKTIVES RASTERFELD (CANVAS) -->
+  <div
+    #canvasRef
+    class="workflow-canvas"
+    (dragover)="onCanvasDragOver($event)"
+    (dragleave)="onCanvasDragLeave()"
+    (drop)="onCanvasDrop($event)"
+  >
+    <!-- Empty-State-Hinweis wenn noch keine Agenten auf dem Raster liegen -->
+    @if (nodes().length === 0 && !dropPreviewPos()) {
+      <div class="canvas-empty-hint">
+        <div class="empty-icon-circle">
+          <mat-icon>drag_indicator</mat-icon>
+        </div>
+        <h3>Agenten per Drag & Drop hierher ziehen</h3>
+        <p>
+          Ziehe Agenten aus der linken Liste auf das Rasterfeld. Platziere sie in der Nähe eines
+          anderen Agenten zum automatischen Verbinden oder ziehe Pfeile über die seitlichen Punkte.
+        </p>
+      </div>
+    }
+
+    <!-- Drop-Vorschau beim Reinziehen eines Agenten -->
+    @if (dropPreviewPos(); as preview) {
+      <div
+        class="drop-preview-ghost"
+        [style.transform]="'translate(' + preview.x + 'px, ' + preview.y + 'px)'"
+      >
+        <span>Hier platzieren</span>
+      </div>
+    }
+
+    <!-- SVG-EBENE FÜR VERBINDUNGSPFEILE (EDGES) -->
+    <svg class="edges-svg-layer">
+      <defs>
+        <marker
+          id="workflow-arrow"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 9 5 L 0 8.5 z" class="arrow-marker-path" />
+        </marker>
+        <marker
+          id="workflow-arrow-active"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 9 5 L 0 8.5 z" class="arrow-marker-active-path" />
+        </marker>
+        <marker
+          id="workflow-arrow-running"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 9 5 L 0 8.5 z" class="arrow-marker-running-path" />
+        </marker>
+      </defs>
+
+      <!-- Bestehende Verbindungen -->
+      @for (edge of renderedEdges(); track edge.id) {
+        <g
+          class="edge-group"
+          [class.edge-sim-running]="edge.isEdgeActive"
+          [class.edge-sim-completed]="edge.isEdgeCompleted"
+          (click)="removeEdge($event, edge.id)"
+        >
+          <path [attr.d]="edge.path" class="edge-hit-area" />
+          <path
+            [attr.d]="edge.path"
+            class="edge-path"
+            [attr.marker-end]="
+              edge.isEdgeActive
+                ? 'url(#workflow-arrow-running)'
+                : edge.isEdgeCompleted
+                  ? 'url(#workflow-arrow-active)'
+                  : 'url(#workflow-arrow)'
+            "
+          />
+          <g
+            class="edge-delete-badge"
+            [attr.transform]="'translate(' + edge.midX + ',' + edge.midY + ')'"
+          >
+            <circle r="10" />
+            <text text-anchor="middle" dy="3.5">×</text>
+          </g>
+        </g>
+      }
+
+      <!-- Temporäre Linie während des Ziehens von einem Port oder beim Auto-Snap -->
+      @if (tempConnectionPath(); as tempPath) {
+        <path
+          [attr.d]="tempPath"
+          class="edge-path temp-edge"
+          marker-end="url(#workflow-arrow-active)"
+        />
+      }
+    </svg>
+
+    <!-- AGENTEN-KNOTEN (NODES) -->
+    @for (node of nodes(); track node.id; let idx = $index) {
+      <div
+        class="workflow-node-card"
+        [class.snap-highlight]="snapTargetNodeId() === node.id"
+        [class.port-target-highlight]="hoveredTargetPortNodeId() === node.id"
+        [class.has-prompt]="!!node.prompt"
+        [class.sim-running]="isNodeRunning(node.id)"
+        [class.sim-completed]="isNodeCompleted(node.id)"
+        [class.sim-error]="isNodeError(node.id)"
+        [style.transform]="'translate(' + node.x + 'px, ' + node.y + 'px)'"
+        (mousedown)="onNodeMouseDown($event, node)"
+        (mouseenter)="onNodeMouseEnter(node)"
+        (mouseleave)="onNodeMouseLeave(node)"
+        (click)="onNodeClick($event, node)"
+      >
+        <!-- Linker Input-Port -->
+        <div
+          class="node-port input-port"
+          matTooltip="Eingang (Verbindung hierher ziehen)"
+        ></div>
+
+        <!-- Karten-Kopfzeile mit Avatar, Name, Status-Badge und Löschen-Button -->
+        <div class="node-card-header">
+          <div class="node-avatar" [style.background-color]="getAvatarBg(node.agentName)">
+            @if (isNodeRunning(node.id)) {
+              <mat-icon class="avatar-spin-icon">autorenew</mat-icon>
+            } @else {
+              {{ getInitials(node.agentName) }}
+            }
+          </div>
+
+          <div class="node-title-wrap">
+            <div class="node-step-row">
+              <span class="node-step-label">Schritt {{ getNodeStepNumber(node.id, idx) }}</span>
+
+              @if (isNodeRunning(node.id)) {
+                <span class="node-sim-badge running">Arbeitet…</span>
+              } @else if (isNodeCompleted(node.id)) {
+                <span class="node-sim-badge completed">
+                  <mat-icon>check</mat-icon>
+                  Fertig
+                </span>
+              } @else if (isNodeError(node.id)) {
+                <span class="node-sim-badge error">Fehler</span>
+              }
+            </div>
+            <h4 class="node-agent-name">{{ node.agentName }}</h4>
+          </div>
+
+          <button
+            type="button"
+            class="node-delete-btn"
+            title="Agent aus Workflow entfernen"
+            (click)="removeNode($event, node.id)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Karten-Fußzeile: Prompt-Status / Vorschau -->
+        <div class="node-card-body">
+          @if (isNodeRunning(node.id)) {
+            <div class="prompt-preview live-hint">
+              <mat-icon class="prompt-icon running-icon">bolt</mat-icon>
+              <span>Klicken für Live-Ausgabe…</span>
+            </div>
+          } @else if (node.prompt) {
+            <div class="prompt-preview" [title]="node.prompt">
+              <mat-icon class="prompt-icon configured">chat_bubble</mat-icon>
+              <span>{{ node.prompt }}</span>
+            </div>
+          } @else {
+            <div class="prompt-preview empty">
+              <mat-icon class="prompt-icon">edit_note</mat-icon>
+              <span>Klicken, um Prompt anzulegen...</span>
+            </div>
+          }
+        </div>
+
+        <!-- Rechter Output-Port (zum Ziehen von Pfeilen) -->
+        <div
+          class="node-port output-port"
+          matTooltip="Pfeil ziehen, um mit nächstem Agenten zu verbinden"
+          (mousedown)="onStartPortDrag($event, node)"
+        ></div>
+      </div>
+    }
+  </div>
+
+  <!-- FLOATING ACTION BUTTON (FAB) UNTEN RECHTS ZUM STARTEN/STOPPEN DES WORKFLOWS -->
+  <div class="workflow-run-controls">
+    @if (isSimulating() && activeSimulationNode(); as activeNode) {
+      <div class="simulation-status-pill running">
+        <span class="pulse-dot"></span>
+        <span>
+          <strong>{{ activeNode.agentName }}</strong> führt Schritt aus…
+        </span>
+      </div>
+    } @else if (simulationFinished()) {
+      <div class="simulation-status-pill finished">
+        <mat-icon>verified</mat-icon>
+        <span>Workflow-Durchlauf abgeschlossen</span>
+      </div>
+    }
+
+    <button
+      type="button"
+      class="workflow-fab-btn"
+      [class.is-running]="isSimulating()"
+      [disabled]="nodes().length === 0"
+      (click)="toggleSimulation()"
+      [matTooltip]="
+        nodes().length === 0
+          ? 'Ziehe zuerst Agenten auf das Raster'
+          : isSimulating()
+            ? 'Workflow-Ausführung stoppen'
+            : 'Workflow speichern & starten'
+      "
+      matTooltipPosition="left"
+    >
+      @if (isSimulating()) {
+        <span class="fab-pulse-ring"></span>
+        <mat-icon>stop</mat-icon>
+      } @else {
+        <mat-icon>play_arrow</mat-icon>
+      }
+    </button>
+  </div>
+
+  <!-- MODAL-DIALOG MIT TABS (PROMPT-KONFIGURATION & LIVE-AUSGABE WIE IM CHAT) -->
+  @if (editingNode(); as activeNode) {
+    <div class="prompt-modal-backdrop" (click)="closePromptModal()">
+      <div
+        class="prompt-modal-dialog"
+        [class.wide-output-modal]="activeModalTab() === 'output'"
+        (click)="$event.stopPropagation()"
+      >
+        <!-- MODAL HEADER -->
+        <div class="modal-header">
+          <div class="modal-agent-info">
+            <div
+              class="node-avatar large"
+              [style.background-color]="getAvatarBg(activeNode.agentName)"
+            >
+              @if (isNodeRunning(activeNode.id)) {
+                <mat-icon class="avatar-spin-icon">autorenew</mat-icon>
+              } @else {
+                {{ getInitials(activeNode.agentName) }}
+              }
+            </div>
+            <div>
+              <div class="modal-title-row">
+                <h3>{{ activeNode.agentName }}</h3>
+                @if (isNodeRunning(activeNode.id)) {
+                  <span class="node-sim-badge running">Generiert live…</span>
+                } @else if (isNodeCompleted(activeNode.id)) {
+                  <span class="node-sim-badge completed">
+                    <mat-icon>check</mat-icon>
+                    Abgeschlossen
+                  </span>
+                }
+              </div>
+              <p>
+                {{
+                  activeNode.agentDescription ||
+                    'Konfiguriere den Prompt oder verfolge die Live-Ausführung dieses Agenten.'
+                }}
+              </p>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" (click)="closePromptModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- MODAL TABS -->
+        <div class="modal-tabs-bar">
+          <button
+            type="button"
+            class="modal-tab-btn"
+            [class.active]="activeModalTab() === 'prompt'"
+            (click)="setModalTab('prompt')"
+          >
+            <mat-icon>edit_note</mat-icon>
+            <span>Prompt & Konfiguration</span>
+          </button>
+
+          <button
+            type="button"
+            class="modal-tab-btn"
+            [class.active]="activeModalTab() === 'output'"
+            (click)="setModalTab('output')"
+          >
+            <mat-icon>terminal</mat-icon>
+            <span>Live-Ausgabe & Verlauf</span>
+            @if (isNodeRunning(activeNode.id)) {
+              <span class="tab-live-dot"></span>
+            }
+          </button>
+        </div>
+
+        <!-- TAB 1: PROMPT & KONFIGURATION -->
+        @if (activeModalTab() === 'prompt') {
+          <div class="modal-body">
+            <label class="prompt-label" for="workflowNodePrompt">Aufgaben-Prompt / Instruktion</label>
+            <textarea
+              id="workflowNodePrompt"
+              class="prompt-textarea"
+              rows="6"
+              placeholder="z.B.: Analysiere die Ergebnisse des vorherigen Agenten und erstelle eine Zusammenfassung als Markdown-Bericht..."
+              [ngModel]="editingPromptText()"
+              (ngModelChange)="editingPromptText.set($event)"
+              autofocus
+            ></textarea>
+            <span class="prompt-hint">
+              Tipp: Bei eingehenden Verbindungen wird das Ergebnis der Vorgänger-Agenten automatisch
+              im Kontext übergeben.
+            </span>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="toolbar-btn secondary" (click)="closePromptModal()">
+              Abbrechen
+            </button>
+            <button type="button" class="toolbar-btn primary" (click)="saveNodePrompt()">
+              <mat-icon>check</mat-icon>
+              <span>Prompt übernehmen</span>
+            </button>
+          </div>
+        }
+
+        <!-- TAB 2: LIVE-AUSGABE & VERLAUF (WIE IM CHAT) -->
+        @if (activeModalTab() === 'output') {
+          <div class="modal-output-body">
+            @if (activeModalNodeState(); as nodeState) {
+              <!-- 1. THOUGHT STREAM TIMELINE -->
+              @if (nodeState.isThinking || nodeState.thoughts.length > 0) {
+                <div
+                  class="thought-process-box"
+                  [class.expanded]="nodeState.thoughtsExpanded"
+                  [class.is-thinking]="nodeState.isThinking"
+                >
+                  <div
+                    class="thought-box-header"
+                    (click)="toggleNodeThoughts(activeNode.id)"
+                  >
+                    <div class="header-left">
+                      <mat-icon
+                        class="thought-icon"
+                        [class.pulse-brain]="nodeState.isThinking"
+                      >
+                        psychology
+                      </mat-icon>
+                      <span class="thought-title">
+                        @if (nodeState.isThinking) {
+                          Denkt nach...
+                        } @else {
+                          Gedankenprozess ({{ nodeState.thoughts.length }}
+                          {{ nodeState.thoughts.length === 1 ? 'Schritt' : 'Schritte' }})
+                        }
+                      </span>
+                    </div>
+                    <mat-icon class="expand-chevron">
+                      {{ nodeState.thoughtsExpanded ? 'expand_less' : 'expand_more' }}
+                    </mat-icon>
+                  </div>
+
+                  @if (nodeState.thoughtsExpanded) {
+                    <div class="thought-box-content">
+                      @if (nodeState.thoughts.length > 0) {
+                        <div class="thought-timeline">
+                          @for (item of nodeState.thoughts; track $index) {
+                            <div class="thought-step">
+                              <div class="step-marker">
+                                <div class="step-dot"></div>
+                                @if (!$last || nodeState.isThinking) {
+                                  <div class="step-line"></div>
+                                }
+                              </div>
+                              <div class="step-body">
+                                <div class="step-meta">
+                                  <span class="step-number">Schritt {{ $index + 1 }}</span>
+                                  @if (item.timestamp) {
+                                    <span class="step-time">
+                                      {{ item.timestamp | date: 'HH:mm:ss' }}
+                                    </span>
+                                  }
+                                </div>
+                                <div class="step-text">{{ item.text }}</div>
+                              </div>
+                            </div>
+                          }
+
+                          @if (nodeState.isThinking) {
+                            <div class="thought-step active-thinking-step">
+                              <div class="step-marker">
+                                <div class="step-dot pulsing"></div>
+                              </div>
+                              <div class="step-body">
+                                <span class="thinking-Wait-label">
+                                  Analysiere nächsten Schritt...
+                                </span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      } @else if (nodeState.isThinking) {
+                        <div class="thought-empty-loading">
+                          <span>Initialisiere Gedankenstrom...</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- 2. TASK CHAINS & TOOL CALLS -->
+              @if (nodeState.taskPhases.length > 0) {
+                <div class="node-task-phases">
+                  @for (phase of nodeState.taskPhases; track $index) {
+                    <div class="task-phase-block">
+                      @if (nodeState.taskPhases.length > 1) {
+                        <div class="phase-badge">Phase {{ $index + 1 }}</div>
+                      }
+                      <app-task-chain-list [phase]="phase"></app-task-chain-list>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- 3. FEHLERMELDUNG (FALLS FEHLGESCHLAGEN) -->
+              @if (nodeState.error) {
+                <div class="node-error-banner">
+                  <mat-icon>error_outline</mat-icon>
+                  <span>{{ nodeState.error }}</span>
+                </div>
+              }
+
+              <!-- 4. FORMATIERTE LLM-TEXT-AUSGABE -->
+              @if (nodeState.output) {
+                <div class="node-llm-output-card">
+                  <div
+                    class="formatted-text"
+                    [innerHTML]="formatNodeOutput(nodeState.output)"
+                  ></div>
+                </div>
+              } @else if (nodeState.status === 'running') {
+                <div class="node-waiting-stream">
+                  <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <span>Agent arbeitet am Workflow-Schritt…</span>
+                </div>
+              } @else if (nodeState.status === 'idle') {
+                <div class="node-idle-placeholder">
+                  <mat-icon>play_circle_outline</mat-icon>
+                  <p>
+                    Dieser Agent wurde im aktuellen Durchlauf noch nicht ausgeführt. Starte den
+                    Workflow über den Play-Button unten rechts.
+                  </p>
+                </div>
+              }
+
+              <!-- 5. GENERIERTE DATEIEN / ATTACHMENTS -->
+              @if (nodeState.attachments.length > 0) {
+                <div class="node-attachments-list">
+                  @for (att of nodeState.attachments; track att.id) {
+                    <a
+                      class="attachment-chip"
+                      [href]="att.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <mat-icon>description</mat-icon>
+                      <span>{{ att.filename || att.name }}</span>
+                      <mat-icon class="download-icon">download</mat-icon>
+                    </a>
+                  }
+                </div>
+              }
+            } @else {
+              <div class="node-idle-placeholder">
+                <mat-icon>play_circle_outline</mat-icon>
+                <p>
+                  Noch keine Ausführungsdaten vorhanden. Starte den Workflow über den Play-Button
+                  unten rechts.
+                </p>
+              </div>
+            }
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="toolbar-btn secondary" (click)="setModalTab('prompt')">
+              <mat-icon>edit</mat-icon>
+              <span>Prompt bearbeiten</span>
+            </button>
+            <button type="button" class="toolbar-btn primary" (click)="closePromptModal()">
+              <span>Schließen</span>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
