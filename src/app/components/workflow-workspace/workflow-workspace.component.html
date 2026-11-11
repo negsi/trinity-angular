@@ -154,7 +154,6 @@
           [class.edge-sim-completed]="edge.isEdgeCompleted"
           (click)="removeEdge($event, edge.id)"
         >
-          <!-- Unsichtbarer breiterer Klickpfad zum einfachen Löschen -->
           <path [attr.d]="edge.path" class="edge-hit-area" />
           <path
             [attr.d]="edge.path"
@@ -167,7 +166,6 @@
                   : 'url(#workflow-arrow)'
             "
           />
-          <!-- Kleiner Löschen-Punkt in der Mitte der Verbindung (erscheint bei Hover) -->
           <g
             class="edge-delete-badge"
             [attr.transform]="'translate(' + edge.midX + ',' + edge.midY + ')'"
@@ -197,6 +195,7 @@
         [class.has-prompt]="!!node.prompt"
         [class.sim-running]="isNodeRunning(node.id)"
         [class.sim-completed]="isNodeCompleted(node.id)"
+        [class.sim-error]="isNodeError(node.id)"
         [style.transform]="'translate(' + node.x + 'px, ' + node.y + 'px)'"
         (mousedown)="onNodeMouseDown($event, node)"
         (mouseenter)="onNodeMouseEnter(node)"
@@ -230,6 +229,8 @@
                   <mat-icon>check</mat-icon>
                   Fertig
                 </span>
+              } @else if (isNodeError(node.id)) {
+                <span class="node-sim-badge error">Fehler</span>
               }
             </div>
             <h4 class="node-agent-name">{{ node.agentName }}</h4>
@@ -247,7 +248,12 @@
 
         <!-- Karten-Fußzeile: Prompt-Status / Vorschau -->
         <div class="node-card-body">
-          @if (node.prompt) {
+          @if (isNodeRunning(node.id)) {
+            <div class="prompt-preview live-hint">
+              <mat-icon class="prompt-icon running-icon">bolt</mat-icon>
+              <span>Klicken für Live-Ausgabe…</span>
+            </div>
+          } @else if (node.prompt) {
             <div class="prompt-preview" [title]="node.prompt">
               <mat-icon class="prompt-icon configured">chat_bubble</mat-icon>
               <span>{{ node.prompt }}</span>
@@ -296,8 +302,8 @@
         nodes().length === 0
           ? 'Ziehe zuerst Agenten auf das Raster'
           : isSimulating()
-            ? 'Workflow-Simulation stoppen'
-            : 'Workflow starten (Simulation)'
+            ? 'Workflow-Ausführung stoppen'
+            : 'Workflow speichern & starten'
       "
       matTooltipPosition="left"
     >
@@ -310,21 +316,45 @@
     </button>
   </div>
 
-  <!-- MODAL-DIALOG FÜR DIE PROMPT-EINGABE BEI KLICK AUF EINEN KNOTEN -->
+  <!-- MODAL-DIALOG MIT TABS (PROMPT-KONFIGURATION & LIVE-AUSGABE WIE IM CHAT) -->
   @if (editingNode(); as activeNode) {
     <div class="prompt-modal-backdrop" (click)="closePromptModal()">
-      <div class="prompt-modal-dialog" (click)="$event.stopPropagation()">
+      <div
+        class="prompt-modal-dialog"
+        [class.wide-output-modal]="activeModalTab() === 'output'"
+        (click)="$event.stopPropagation()"
+      >
+        <!-- MODAL HEADER -->
         <div class="modal-header">
           <div class="modal-agent-info">
             <div
               class="node-avatar large"
               [style.background-color]="getAvatarBg(activeNode.agentName)"
             >
-              {{ getInitials(activeNode.agentName) }}
+              @if (isNodeRunning(activeNode.id)) {
+                <mat-icon class="avatar-spin-icon">autorenew</mat-icon>
+              } @else {
+                {{ getInitials(activeNode.agentName) }}
+              }
             </div>
             <div>
-              <h3>Prompt für {{ activeNode.agentName }}</h3>
-              <p>Definiere die Aufgabe, die dieser Agent im Workflow ausführen soll.</p>
+              <div class="modal-title-row">
+                <h3>{{ activeNode.agentName }}</h3>
+                @if (isNodeRunning(activeNode.id)) {
+                  <span class="node-sim-badge running">Generiert live…</span>
+                } @else if (isNodeCompleted(activeNode.id)) {
+                  <span class="node-sim-badge completed">
+                    <mat-icon>check</mat-icon>
+                    Abgeschlossen
+                  </span>
+                }
+              </div>
+              <p>
+                {{
+                  activeNode.agentDescription ||
+                    'Konfiguriere den Prompt oder verfolge die Live-Ausführung dieses Agenten.'
+                }}
+              </p>
             </div>
           </div>
           <button type="button" class="modal-close-btn" (click)="closePromptModal()">
@@ -332,32 +362,234 @@
           </button>
         </div>
 
-        <div class="modal-body">
-          <label class="prompt-label" for="workflowNodePrompt">Aufgaben-Prompt / Instruktion</label>
-          <textarea
-            id="workflowNodePrompt"
-            class="prompt-textarea"
-            rows="6"
-            placeholder="z.B.: Analysiere die Ergebnisse des vorherigen Agenten und erstelle eine Zusammenfassung als Markdown-Bericht..."
-            [ngModel]="editingPromptText()"
-            (ngModelChange)="editingPromptText.set($event)"
-            autofocus
-          ></textarea>
-          <span class="prompt-hint">
-            Tipp: Bei eingehenden Verbindungen wird das Ergebnis des Vorgänger-Agenten automatisch
-            im Kontext übergeben.
-          </span>
+        <!-- MODAL TABS -->
+        <div class="modal-tabs-bar">
+          <button
+            type="button"
+            class="modal-tab-btn"
+            [class.active]="activeModalTab() === 'prompt'"
+            (click)="setModalTab('prompt')"
+          >
+            <mat-icon>edit_note</mat-icon>
+            <span>Prompt & Konfiguration</span>
+          </button>
+
+          <button
+            type="button"
+            class="modal-tab-btn"
+            [class.active]="activeModalTab() === 'output'"
+            (click)="setModalTab('output')"
+          >
+            <mat-icon>terminal</mat-icon>
+            <span>Live-Ausgabe & Verlauf</span>
+            @if (isNodeRunning(activeNode.id)) {
+              <span class="tab-live-dot"></span>
+            }
+          </button>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="toolbar-btn secondary" (click)="closePromptModal()">
-            Abbrechen
-          </button>
-          <button type="button" class="toolbar-btn primary" (click)="saveNodePrompt()">
-            <mat-icon>check</mat-icon>
-            <span>Prompt übernehmen</span>
-          </button>
-        </div>
+        <!-- TAB 1: PROMPT & KONFIGURATION -->
+        @if (activeModalTab() === 'prompt') {
+          <div class="modal-body">
+            <label class="prompt-label" for="workflowNodePrompt">Aufgaben-Prompt / Instruktion</label>
+            <textarea
+              id="workflowNodePrompt"
+              class="prompt-textarea"
+              rows="6"
+              placeholder="z.B.: Analysiere die Ergebnisse des vorherigen Agenten und erstelle eine Zusammenfassung als Markdown-Bericht..."
+              [ngModel]="editingPromptText()"
+              (ngModelChange)="editingPromptText.set($event)"
+              autofocus
+            ></textarea>
+            <span class="prompt-hint">
+              Tipp: Bei eingehenden Verbindungen wird das Ergebnis der Vorgänger-Agenten automatisch
+              im Kontext übergeben.
+            </span>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="toolbar-btn secondary" (click)="closePromptModal()">
+              Abbrechen
+            </button>
+            <button type="button" class="toolbar-btn primary" (click)="saveNodePrompt()">
+              <mat-icon>check</mat-icon>
+              <span>Prompt übernehmen</span>
+            </button>
+          </div>
+        }
+
+        <!-- TAB 2: LIVE-AUSGABE & VERLAUF (WIE IM CHAT) -->
+        @if (activeModalTab() === 'output') {
+          <div class="modal-output-body">
+            @if (activeModalNodeState(); as nodeState) {
+              <!-- 1. THOUGHT STREAM TIMELINE -->
+              @if (nodeState.isThinking || nodeState.thoughts.length > 0) {
+                <div
+                  class="thought-process-box"
+                  [class.expanded]="nodeState.thoughtsExpanded"
+                  [class.is-thinking]="nodeState.isThinking"
+                >
+                  <div
+                    class="thought-box-header"
+                    (click)="toggleNodeThoughts(activeNode.id)"
+                  >
+                    <div class="header-left">
+                      <mat-icon
+                        class="thought-icon"
+                        [class.pulse-brain]="nodeState.isThinking"
+                      >
+                        psychology
+                      </mat-icon>
+                      <span class="thought-title">
+                        @if (nodeState.isThinking) {
+                          Denkt nach...
+                        } @else {
+                          Gedankenprozess ({{ nodeState.thoughts.length }}
+                          {{ nodeState.thoughts.length === 1 ? 'Schritt' : 'Schritte' }})
+                        }
+                      </span>
+                    </div>
+                    <mat-icon class="expand-chevron">
+                      {{ nodeState.thoughtsExpanded ? 'expand_less' : 'expand_more' }}
+                    </mat-icon>
+                  </div>
+
+                  @if (nodeState.thoughtsExpanded) {
+                    <div class="thought-box-content">
+                      @if (nodeState.thoughts.length > 0) {
+                        <div class="thought-timeline">
+                          @for (item of nodeState.thoughts; track $index) {
+                            <div class="thought-step">
+                              <div class="step-marker">
+                                <div class="step-dot"></div>
+                                @if (!$last || nodeState.isThinking) {
+                                  <div class="step-line"></div>
+                                }
+                              </div>
+                              <div class="step-body">
+                                <div class="step-meta">
+                                  <span class="step-number">Schritt {{ $index + 1 }}</span>
+                                  @if (item.timestamp) {
+                                    <span class="step-time">
+                                      {{ item.timestamp | date: 'HH:mm:ss' }}
+                                    </span>
+                                  }
+                                </div>
+                                <div class="step-text">{{ item.text }}</div>
+                              </div>
+                            </div>
+                          }
+
+                          @if (nodeState.isThinking) {
+                            <div class="thought-step active-thinking-step">
+                              <div class="step-marker">
+                                <div class="step-dot pulsing"></div>
+                              </div>
+                              <div class="step-body">
+                                <span class="thinking-Wait-label">
+                                  Analysiere nächsten Schritt...
+                                </span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      } @else if (nodeState.isThinking) {
+                        <div class="thought-empty-loading">
+                          <span>Initialisiere Gedankenstrom...</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- 2. TASK CHAINS & TOOL CALLS -->
+              @if (nodeState.taskPhases.length > 0) {
+                <div class="node-task-phases">
+                  @for (phase of nodeState.taskPhases; track $index) {
+                    <div class="task-phase-block">
+                      @if (nodeState.taskPhases.length > 1) {
+                        <div class="phase-badge">Phase {{ $index + 1 }}</div>
+                      }
+                      <app-task-chain-list [phase]="phase"></app-task-chain-list>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- 3. FEHLERMELDUNG (FALLS FEHLGESCHLAGEN) -->
+              @if (nodeState.error) {
+                <div class="node-error-banner">
+                  <mat-icon>error_outline</mat-icon>
+                  <span>{{ nodeState.error }}</span>
+                </div>
+              }
+
+              <!-- 4. FORMATIERTE LLM-TEXT-AUSGABE -->
+              @if (nodeState.output) {
+                <div class="node-llm-output-card">
+                  <div
+                    class="formatted-text"
+                    [innerHTML]="formatNodeOutput(nodeState.output)"
+                  ></div>
+                </div>
+              } @else if (nodeState.status === 'running') {
+                <div class="node-waiting-stream">
+                  <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <span>Agent arbeitet am Workflow-Schritt…</span>
+                </div>
+              } @else if (nodeState.status === 'idle') {
+                <div class="node-idle-placeholder">
+                  <mat-icon>play_circle_outline</mat-icon>
+                  <p>
+                    Dieser Agent wurde im aktuellen Durchlauf noch nicht ausgeführt. Starte den
+                    Workflow über den Play-Button unten rechts.
+                  </p>
+                </div>
+              }
+
+              <!-- 5. GENERIERTE DATEIEN / ATTACHMENTS -->
+              @if (nodeState.attachments.length > 0) {
+                <div class="node-attachments-list">
+                  @for (att of nodeState.attachments; track att.id) {
+                    <a
+                      class="attachment-chip"
+                      [href]="att.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <mat-icon>description</mat-icon>
+                      <span>{{ att.filename || att.name }}</span>
+                      <mat-icon class="download-icon">download</mat-icon>
+                    </a>
+                  }
+                </div>
+              }
+            } @else {
+              <div class="node-idle-placeholder">
+                <mat-icon>play_circle_outline</mat-icon>
+                <p>
+                  Noch keine Ausführungsdaten vorhanden. Starte den Workflow über den Play-Button
+                  unten rechts.
+                </p>
+              </div>
+            }
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="toolbar-btn secondary" (click)="setModalTab('prompt')">
+              <mat-icon>edit</mat-icon>
+              <span>Prompt bearbeiten</span>
+            </button>
+            <button type="button" class="toolbar-btn primary" (click)="closePromptModal()">
+              <span>Schließen</span>
+            </button>
+          </div>
+        }
       </div>
     </div>
   }

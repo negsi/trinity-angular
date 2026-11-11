@@ -10,13 +10,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Added workflow workspace tab (`workflows`) to the navigation sidebar and main layout (`AppComponent`, `SidebarComponent`).
 - Added HTML5 drag-and-drop support (`application/trinity-agent`) for agents in `AgentListComponent` to allow dragging agents onto the workflow canvas.
-- Added interactive workflow execution simulation in `WorkflowWorkspaceComponent` with parallel topological layer execution (`computeExecutionLayers`), logical step numbering per layer, animated node/edge status indicators (`running`, `completed`), status pills, and a floating action button (FAB) to start/stop runs.
+- Added interactive workflow execution in `WorkflowWorkspaceComponent` with parallel topological layer calculation (`computeExecutionLayers`), logical step numbering per layer, animated node/edge status indicators (`running`, `completed`, `error`), status pills, and a floating action button (FAB) to start/stop runs.
 - Added REST API integration (`/api/v1/workflows`) in `WorkflowService` for loading, creating, updating, and deleting workflows on the backend, including multi-dependency support (`depends_on_steps`) in execution payloads.
+- Added real-time Server-Sent Events (SSE) workflow execution streaming (`POST /api/v1/workflows/:id/stream`) in `WorkflowService` (`streamWorkflowExecution`) with `AbortController` support and typed stream events (`WorkflowStreamEvent`, `WorkflowNodeExecutionState`).
+- Added a tabbed node detail modal (`prompt` and `output` tabs) in `WorkflowWorkspaceComponent` featuring a live collapsible thought timeline, task chain phase tracking (`TaskChainListComponent`), streaming LLM output, error banners, and downloadable file attachment chips.
+- Added `formatMessageContent` helper in `text.util.ts` and `MessageThought` interface in `message.model.ts`.
 
 ### Changed
 
 - Updated `AppComponent` and `SidebarComponent` to support switching between the chat workspace and the workflow builder view.
 - Replaced `localStorage` workflow persistence in `WorkflowService` with `HttpClient`-based backend persistence and reactive `Observable` streams.
+- Replaced timer-based workflow simulation in `WorkflowWorkspaceComponent` with automatic backend saving and live SSE stream processing for thoughts, tool calls, chunks, attachments, and node errors.
 - Improved workflow canvas rendering and coordinate calculation in `WorkflowWorkspaceComponent` by accounting for scroll offsets (`scrollLeft`, `scrollTop`), widening node cards (`250px`), and refining SVG port/arrow alignment.
 - Removed obsolete `concat_code.py` codebase aggregation utility script.
 

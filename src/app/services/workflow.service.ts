@@ -5,8 +5,10 @@ import {
   WorkflowGraph,
   WorkflowNode,
   WorkflowExecutionPayload,
-  WorkflowExecutionStep
+  WorkflowExecutionStep,
+  WorkflowStreamEvent
 } from '../models/workflow.model';
+import { SseDecoder } from '../utils/sse-decoder.util';
 
 @Injectable({
   providedIn: 'root'
@@ -134,6 +136,75 @@ export class WorkflowService {
         }
       })
     );
+  }
+
+  /**
+   * Startet die Echtzeit-Ausführung eines gespeicherten Workflows über Server-Sent Events (SSE).
+   * Gibt einen AbortController zurück, mit dem der Durchlauf jederzeit gestoppt werden kann.
+   */
+  streamWorkflowExecution(
+    workflowId: string,
+    callbacks: {
+      onEvent: (event: WorkflowStreamEvent) => void;
+      onComplete: () => void;
+      onError: (err: unknown) => void;
+    }
+  ): AbortController {
+    const abortController = new AbortController();
+
+    fetch(`${this.apiUrl}/${workflowId}/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream'
+      },
+      body: JSON.stringify({}),
+      signal: abortController.signal
+    })
+      .then(async (response) => {
+        if (!response.ok || !response.body) {
+          throw new Error(`HTTP ${response.status}: Workflow-Stream konnte nicht gestartet werden.`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const rawEvents = buffer.split('\n\n');
+          buffer = rawEvents.pop() ?? '';
+
+          for (const rawBlock of rawEvents) {
+            const dataPayload = SseDecoder.extractDataPayload(rawBlock.trim());
+            if (!dataPayload) continue;
+            if (dataPayload === '[DONE]') {
+              callbacks.onComplete();
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(dataPayload) as WorkflowStreamEvent;
+              callbacks.onEvent(parsed);
+            } catch (parseErr) {
+              console.warn('Unbekanntes SSE-Payload im Workflow-Stream:', dataPayload, parseErr);
+            }
+          }
+        }
+
+        callbacks.onComplete();
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        callbacks.onError(err);
+      });
+
+    return abortController;
   }
 
   /**

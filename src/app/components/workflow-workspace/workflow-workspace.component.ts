@@ -8,18 +8,29 @@ import {
   effect,
   inject,
   input,
-  signal
+  signal,
+   untracked
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { SafeHtml } from '@angular/platform-browser';
 
 import { WorkflowService } from '../../services/workflow.service';
-import { WorkflowEdge, WorkflowNode } from '../../models/workflow.model';
+import {
+  WorkflowEdge,
+  WorkflowNode,
+  WorkflowNodeExecutionState,
+  WorkflowStreamEvent
+} from '../../models/workflow.model';
 import { Agent } from '../../models/agent.model';
+import { TaskItem, TaskStatus } from '../../models/task-chain.model';
+import { TaskChainListComponent } from '../task-chain-list/task-chain-list.component';
 import { getAvatarColor, getInitials } from '../../utils/avatar.util';
+import { SseDecoder } from '../../utils/sse-decoder.util';
+import { formatMessageContent } from '../../utils/text.util';
 
 interface TempConnection {
   sourceNodeId: string;
@@ -37,7 +48,8 @@ interface TempConnection {
     FormsModule,
     MatIconModule,
     MatButtonModule,
-    MatTooltipModule
+    MatTooltipModule,
+    TaskChainListComponent
   ],
   templateUrl: './workflow-workspace.component.html',
   styleUrl: './workflow-workspace.component.scss'
@@ -50,12 +62,11 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
 
   // Raster- und Karten-Konstanten (exakt passend zu box-sizing: border-box)
   readonly GRID_SIZE = 24;
-  readonly NODE_WIDTH = 220;
+  readonly NODE_WIDTH = 250;
   readonly NODE_HEIGHT = 96;
-  readonly PORT_RADIUS = 6.5; // Halbe Breite des .node-port (13px / 2)
-  readonly SNAP_DISTANCE = 210; // Radius für Auto-Snap & Auto-Connect
-  readonly AUTO_OFFSET_X = 280; // Abstand beim automatischen Einrasten rechts neben einem Knoten
-  readonly SIMULATION_STEP_MS = 2000; // Dauer pro Ausführungs-Stufe in der Simulation
+  readonly PORT_RADIUS = 6.5;
+  readonly SNAP_DISTANCE = 210;
+  readonly AUTO_OFFSET_X = 280;
 
   // Lokaler Arbeitszustand des aktuell geöffneten Workflows
   readonly workflowId = signal<string>('');
@@ -68,13 +79,19 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   readonly snapTargetNodeId = signal<string | null>(null);
   readonly dropPreviewPos = signal<{ x: number; y: number } | null>(null);
 
-  // State für die Workflow-Simulation (unterstützt parallele Knoten pro Stufe!)
+  // State für die echte Backend-Workflow-Ausführung (unterstützt parallele Knoten pro Stufe!)
   readonly isSimulating = signal<boolean>(false);
   readonly simulationFinished = signal<boolean>(false);
   readonly activeSimulationNodeIds = signal<Set<string>>(new Set());
   readonly completedSimulationNodeIds = signal<Set<string>>(new Set());
-  private simulationTimerId: ReturnType<typeof setTimeout> | null = null;
+  readonly errorSimulationNodeIds = signal<Set<string>>(new Set());
+
+  // Detaillierter Live-Ausführungszustand pro Knoten (Thoughts, Task-Chains, LLM-Output, Attachments)
+  readonly nodeExecutionStates = signal<Record<string, WorkflowNodeExecutionState>>({});
+
+  private streamAbortController: AbortController | null = null;
   private finishResetTimerId: ReturnType<typeof setTimeout> | null = null;
+  private isInternalSaveBeforeRun = false;
 
   // Aktuell laufende Knoten für das Status-Banner unten rechts
   readonly activeSimulationNode = computed(() => {
@@ -111,15 +128,23 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   readonly activeConnection = signal<TempConnection | null>(null);
   readonly hoveredTargetPortNodeId = signal<string | null>(null);
 
-  // State für das Prompt-Modal bei Klick auf einen Knoten
+  // State für das Knoten-Modal (mit Tabs: 'prompt' | 'output')
   readonly editingNode = signal<WorkflowNode | null>(null);
   readonly editingPromptText = signal<string>('');
+  readonly activeModalTab = signal<'prompt' | 'output'>('prompt');
+
+  // Berechneter Live-State des aktuell im Modal geöffneten Knotens
+  readonly activeModalNodeState = computed<WorkflowNodeExecutionState | null>(() => {
+    const node = this.editingNode();
+    if (!node) return null;
+    return this.nodeExecutionStates()[node.id] ?? null;
+  });
 
   // Avatar-Hilfsfunktionen
   readonly getInitials = getInitials;
   readonly getAvatarBg = getAvatarColor;
 
-  // Berechnete SVG-Pfade für alle Verbindungen inkl. exakter Port-Zentrierung & Simulations-Status
+  // Berechnete SVG-Pfade für alle Verbindungen inkl. exakter Port-Zentrierung & Ausführungs-Status
   readonly renderedEdges = computed(() => {
     const currentNodes = this.nodes();
     const currentEdges = this.edges();
@@ -132,15 +157,13 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
         const target = currentNodes.find((n) => n.id === edge.targetNodeId);
         if (!source || !target) return null;
 
-        // Exakte Mitte des rechten Output-Ports bzw. linken Input-Ports
         const startX = source.x + this.NODE_WIDTH;
         const startY = source.y + this.NODE_HEIGHT / 2;
         const endX = target.x - this.PORT_RADIUS;
         const endY = target.y + this.NODE_HEIGHT / 2;
 
         const isEdgeActive =
-          completedIds.has(edge.sourceNodeId) &&
-          this.activeSimulationNodeIds().has(edge.targetNodeId);
+          completedIds.has(edge.sourceNodeId) && activeIds.has(edge.targetNodeId);
         const isEdgeCompleted =
           completedIds.has(edge.sourceNodeId) && completedIds.has(edge.targetNodeId);
 
@@ -163,32 +186,42 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     return this.buildBezierPath(conn.startX, conn.startY, conn.currentX, conn.currentY);
   });
 
-  constructor() {
-    // Synchronisiert den lokalen Canvas-State, wenn im Service ein Workflow geladen wird
+   constructor() {
+    // Synchronisiert den lokalen Canvas-State, wenn im Service ein anderer Workflow ausgewählt wird
     effect(
       () => {
         const active = this.workflowService.activeWorkflow();
+        const isInternalSave = untracked(() => this.isInternalSaveBeforeRun);
+
+        if (isInternalSave) {
+          this.isInternalSaveBeforeRun = false; // <-- ERST HIER zurücksetzen!
+          this.workflowId.set(active.id);
+          this.workflowName.set(active.name);
+          return;
+        }
+
         this.stopSimulation(true);
         this.workflowId.set(active.id);
         this.workflowName.set(active.name);
         this.nodes.set(structuredClone(active.nodes));
         this.edges.set(structuredClone(active.edges));
+        this.nodeExecutionStates.set({});
       },
       { allowSignalWrites: true }
     );
   }
 
   ngOnDestroy(): void {
-    this.clearSimulationTimers();
+    this.stopSimulation(false);
   }
 
   // ===========================================================================
-  // WORKFLOW-SIMULATION (START / STOPP / PARALLELER STUFEN-DURCHLAUF)
+  // ECHTE WORKFLOW-AUSFÜHRUNG (AUTOMATISCHES SPEICHERN + BACKEND SSE-STREAM)
   // ===========================================================================
 
   toggleSimulation(): void {
     if (this.isSimulating()) {
-      this.stopSimulation(true);
+      this.stopSimulation(false);
     } else {
       this.startSimulation();
     }
@@ -198,24 +231,302 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     const currentNodes = this.nodes();
     if (currentNodes.length === 0) return;
 
-    this.clearSimulationTimers();
+    this.clearTimersAndStream();
     this.isSimulating.set(true);
     this.simulationFinished.set(false);
+    this.activeSimulationNodeIds.set(new Set());
     this.completedSimulationNodeIds.set(new Set());
+    this.errorSimulationNodeIds.set(new Set());
 
-    const executionLayers = this.computeExecutionLayers(currentNodes, this.edges());
-    this.runSimulationLayer(executionLayers, 0);
+    // Initialisiere leere Execution-States für alle Knoten
+    const initialStates: Record<string, WorkflowNodeExecutionState> = {};
+    for (const n of currentNodes) {
+      initialStates[n.id] = {
+        nodeId: n.id,
+        status: 'idle',
+        output: '',
+        thoughts: [],
+        isThinking: false,
+        thoughtsExpanded: false,
+        taskPhases: [],
+        attachments: []
+      };
+    }
+    this.nodeExecutionStates.set(initialStates);
+
+    // 1. Automatisch im Backend speichern, dann 2. Stream starten
+    this.isInternalSaveBeforeRun = true;
+    this.workflowService
+      .saveWorkflow({
+        id: this.workflowId(),
+        name: this.workflowName(),
+        nodes: this.nodes(),
+        edges: this.edges(),
+        updatedAt: new Date().toISOString()
+      })
+      .subscribe({
+        next: (saved) => {
+          // NICHT hier auf false setzen, da der effect() erst asynchron danach feuert!
+          this.workflowId.set(saved.id);
+          this.workflowName.set(saved.name);
+
+          // Falls ein Knoten-Modal offen ist, direkt auf den Live-Output-Tab schalten
+          if (this.editingNode()) {
+            this.activeModalTab.set('output');
+          }
+
+          this.streamAbortController = this.workflowService.streamWorkflowExecution(saved.id, {
+            onEvent: (event) => this.handleWorkflowStreamEvent(event),
+            onComplete: () => {
+              this.activeSimulationNodeIds.set(new Set());
+              this.isSimulating.set(false);
+              this.simulationFinished.set(true);
+
+              this.finishResetTimerId = setTimeout(() => {
+                this.simulationFinished.set(false);
+              }, 5000);
+            },
+            onError: (err) => {
+              console.error('Fehler während der Workflow-Ausführung:', err);
+              this.activeSimulationNodeIds.set(new Set());
+              this.isSimulating.set(false);
+            }
+          });
+        },
+        error: (err) => {
+          this.isInternalSaveBeforeRun = false;
+          console.error('Workflow konnte vor dem Start nicht gespeichert werden:', err);
+          this.isSimulating.set(false);
+        }
+      });
   }
 
   stopSimulation(resetHighlights = true): void {
-    this.clearSimulationTimers();
+    this.clearTimersAndStream();
     this.isSimulating.set(false);
     this.activeSimulationNodeIds.set(new Set());
+
+    // Laufende Knoten im State als nicht mehr denkend markieren
+    this.nodeExecutionStates.update((states) => {
+      const updated = { ...states };
+      for (const key of Object.keys(updated)) {
+        if (updated[key].status === 'running') {
+          updated[key] = { ...updated[key], isThinking: false };
+        }
+      }
+      return updated;
+    });
 
     if (resetHighlights) {
       this.simulationFinished.set(false);
       this.completedSimulationNodeIds.set(new Set());
+      this.errorSimulationNodeIds.set(new Set());
     }
+  }
+
+  private handleWorkflowStreamEvent(event: WorkflowStreamEvent): void {
+    switch (event.type) {
+      case 'node_start': {
+        this.activeSimulationNodeIds.update((set) => {
+          const next = new Set(set);
+          next.add(event.node_id);
+          return next;
+        });
+
+        this.updateNodeState(event.node_id, (state) => ({
+          ...state,
+          status: 'running',
+          isThinking: true,
+          thoughtsExpanded: true
+        }));
+        break;
+      }
+
+      case 'node_thought': {
+        const cleaned = (event.delta || event.thought || '').trim();
+        if (!cleaned) break;
+
+        this.updateNodeState(event.node_id, (state) => ({
+          ...state,
+          isThinking: true,
+          thoughts: [
+            ...state.thoughts,
+            {
+              text: cleaned,
+              timestamp: new Date().toISOString()
+            }
+          ]
+        }));
+        break;
+      }
+
+      case 'node_task_chain': {
+        const payload = event.payload;
+        const tcType = payload['type'] as string | undefined;
+
+        if (tcType === 'task_chain_init' && Array.isArray(payload['steps'])) {
+          const callDepth = (payload['call_depth'] as number) ?? 0;
+          const normalizedSteps: TaskItem[] = (
+            payload['steps'] as Record<string, unknown>[]
+          ).map((s) => ({
+            step_number: (s['step_number'] ?? s['step']) as number,
+            description: (s['description'] as string) ?? '',
+            tool_name: (s['tool_name'] ?? s['tool']) as string | undefined,
+            parameters: (s['parameters'] ?? s['params']) as Record<string, unknown> | undefined,
+            status: ((s['status'] as TaskStatus) ?? 'pending')
+          }));
+
+          this.updateNodeState(event.node_id, (state) => {
+            // Top-level Phase im Workflow-Knoten hat callDepth <= 1 (da Workflow mit call_depth=1 startet)
+            if (callDepth <= 1 || state.taskPhases.length === 0) {
+              return {
+                ...state,
+                taskPhases: [
+                  ...state.taskPhases,
+                  {
+                    phaseIndex: state.taskPhases.length,
+                    callDepth,
+                    agentId: payload['agent_id'] as string | undefined,
+                    steps: normalizedSteps
+                  }
+                ]
+              };
+            }
+
+            // Sub-Agenten Task-Chain an den laufenden message_agent-Schritt anhängen
+            const updatedPhases = state.taskPhases.map((phase) => ({
+              ...phase,
+              steps: phase.steps.map((step) => {
+                if (
+                  step.tool_name === 'message_agent' &&
+                  (step.status === 'running' || step.status === 'pending')
+                ) {
+                  return {
+                    ...step,
+                    subTaskChain: {
+                      phaseIndex: 0, // <--- Hinzufügen, um den Typfehler zu lösen
+                      callDepth,
+                      agentId: payload['agent_id'] as string | undefined,
+                      steps: normalizedSteps
+                    }
+                  };
+                }
+                return step;
+              })
+            }));
+
+            return {
+              ...state,
+              taskPhases: updatedPhases
+            };
+          });
+        } else if (tcType === 'task_step_update') {
+          const stepNumber = payload['step_number'] as number;
+          const status = payload['status'] as TaskStatus;
+          const result = payload['result'] as string | Record<string, unknown> | undefined;
+          const callDepth = (payload['call_depth'] as number) ?? 1;
+
+          this.updateNodeState(event.node_id, (state) => ({
+            ...state,
+            taskPhases: SseDecoder.applyTaskStepUpdate(
+              state.taskPhases,
+              stepNumber,
+              status,
+              callDepth,
+              result
+            )
+          }));
+        }
+        break;
+      }
+
+      case 'node_chunk': {
+        const chunkText = event.delta ?? event.content ?? '';
+        if (!chunkText) break;
+
+        this.updateNodeState(event.node_id, (state) => ({
+          ...state,
+          isThinking: false,
+          thoughtsExpanded: false,
+          output: state.output + chunkText
+        }));
+        break;
+      }
+
+      case 'node_attachments': {
+        if (!Array.isArray(event.files) || event.files.length === 0) break;
+        this.updateNodeState(event.node_id, (state) => ({
+          ...state,
+          attachments: [...state.attachments, ...event.files]
+        }));
+        break;
+      }
+
+      case 'node_complete': {
+        this.activeSimulationNodeIds.update((set) => {
+          const next = new Set(set);
+          next.delete(event.node_id);
+          return next;
+        });
+        this.completedSimulationNodeIds.update((set) => {
+          const next = new Set(set);
+          next.add(event.node_id);
+          return next;
+        });
+
+        this.updateNodeState(event.node_id, (state) => ({
+          ...state,
+          status: 'completed',
+          isThinking: false,
+          thoughtsExpanded: false,
+          output: state.output || event.output || ''
+        }));
+        break;
+      }
+
+      case 'node_error': {
+        this.activeSimulationNodeIds.update((set) => {
+          const next = new Set(set);
+          next.delete(event.node_id);
+          return next;
+        });
+        this.errorSimulationNodeIds.update((set) => {
+          const next = new Set(set);
+          next.add(event.node_id);
+          return next;
+        });
+
+        this.updateNodeState(event.node_id, (state) => ({
+          ...state,
+          status: 'error',
+          isThinking: false,
+          error: event.error
+        }));
+        break;
+      }
+    }
+  }
+
+  private updateNodeState(
+    nodeId: string,
+    updater: (prev: WorkflowNodeExecutionState) => WorkflowNodeExecutionState
+  ): void {
+    this.nodeExecutionStates.update((map) => {
+      const current: WorkflowNodeExecutionState = map[nodeId] ?? {
+        nodeId,
+        status: 'idle',
+        output: '',
+        thoughts: [],
+        isThinking: false,
+        thoughtsExpanded: false,
+        taskPhases: [],
+        attachments: []
+      };
+      return {
+        ...map,
+        [nodeId]: updater(current)
+      };
+    });
   }
 
   isNodeRunning(nodeId: string): boolean {
@@ -226,46 +537,38 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     return this.completedSimulationNodeIds().has(nodeId);
   }
 
+  isNodeError(nodeId: string): boolean {
+    return this.errorSimulationNodeIds().has(nodeId);
+  }
+
+  hasNodeExecutionData(nodeId: string): boolean {
+    const st = this.nodeExecutionStates()[nodeId];
+    if (!st) return false;
+    return (
+      st.status !== 'idle' ||
+      Boolean(st.output) ||
+      st.thoughts.length > 0 ||
+      st.taskPhases.length > 0
+    );
+  }
+
+  toggleNodeThoughts(nodeId: string): void {
+    this.updateNodeState(nodeId, (st) => ({
+      ...st,
+      thoughtsExpanded: !st.thoughtsExpanded
+    }));
+  }
+
+  formatNodeOutput(rawText: string): SafeHtml {
+    return formatMessageContent(rawText);
+  }
+
   getNodeStepNumber(nodeId: string, fallbackIndex: number): number {
     return this.nodeStepNumbers().get(nodeId) ?? fallbackIndex + 1;
   }
 
   /**
-   * Führt alle Knoten einer topologischen Stufe (Level) gleichzeitig/parallel aus.
-   * Sobald alle Knoten dieser Stufe fertig sind, starten alle Knoten der nächsten Stufe.
-   */
-  private runSimulationLayer(layers: WorkflowNode[][], layerIndex: number): void {
-    if (!this.isSimulating()) return;
-
-    if (layerIndex >= layers.length) {
-      this.activeSimulationNodeIds.set(new Set());
-      this.isSimulating.set(false);
-      this.simulationFinished.set(true);
-
-      this.finishResetTimerId = setTimeout(() => {
-        this.simulationFinished.set(false);
-        this.completedSimulationNodeIds.set(new Set());
-      }, 4000);
-      return;
-    }
-
-    const currentLayer = layers[layerIndex];
-    const currentLayerIds = new Set(currentLayer.map((n) => n.id));
-    this.activeSimulationNodeIds.set(currentLayerIds);
-
-    this.simulationTimerId = setTimeout(() => {
-      this.completedSimulationNodeIds.update((prev) => {
-        const next = new Set(prev);
-        currentLayer.forEach((n) => next.add(n.id));
-        return next;
-      });
-      this.runSimulationLayer(layers, layerIndex + 1);
-    }, this.SIMULATION_STEP_MS);
-  }
-
-  /**
    * Gruppiert die Knoten topologisch in parallele Ausführungsstufen (Kahn-Algorithmus in Schichten).
-   * Alle Knoten einer Stufe starten exakt gleichzeitig.
    */
   private computeExecutionLayers(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
     const inDegree = new Map<string, number>();
@@ -321,10 +624,10 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     return layers;
   }
 
-  private clearSimulationTimers(): void {
-    if (this.simulationTimerId !== null) {
-      clearTimeout(this.simulationTimerId);
-      this.simulationTimerId = null;
+  private clearTimersAndStream(): void {
+    if (this.streamAbortController) {
+      this.streamAbortController.abort();
+      this.streamAbortController = null;
     }
     if (this.finishResetTimerId !== null) {
       clearTimeout(this.finishResetTimerId);
@@ -337,13 +640,14 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   // ===========================================================================
 
   onSelectSavedWorkflow(workflowId: string): void {
-    if (!workflowId) return;
+    if (!workflowId || workflowId === this.workflowId()) return;
     this.stopSimulation(true);
     this.workflowService.selectWorkflow(workflowId);
   }
 
   onNewWorkflow(): void {
     this.stopSimulation(true);
+    this.nodeExecutionStates.set({});
     this.workflowService.startNewWorkflow();
   }
 
@@ -358,11 +662,7 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
       })
       .subscribe({
         next: (saved) => {
-          const executionPayload = this.workflowService.buildExecutionPlan(saved);
-          console.info(
-            '[Trinity Workflow Engine] Saved to Backend & Prepared Execution Payload:',
-            executionPayload
-          );
+          this.workflowId.set(saved.id);
           this.saveSuccessToast.set(true);
           setTimeout(() => this.saveSuccessToast.set(false), 2500);
         },
@@ -385,6 +685,7 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     this.stopSimulation(true);
     this.nodes.set([]);
     this.edges.set([]);
+    this.nodeExecutionStates.set({});
   }
 
   // ===========================================================================
@@ -439,7 +740,6 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
       let targetX = this.snapToGrid(x - this.NODE_WIDTH / 2);
       let targetY = this.snapToGrid(y - this.NODE_HEIGHT / 2);
 
-      // Prüfen, ob ein bestehender Knoten zum automatischen Einrasten & Verbinden in der Nähe ist
       const nearNode = this.findNearestSnapNode(targetX, targetY);
       if (nearNode) {
         targetX = this.snapToGrid(nearNode.x + this.AUTO_OFFSET_X);
@@ -458,7 +758,6 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
 
       this.nodes.update((list) => [...list, newNode]);
 
-      // Automatische Verbindung (WorkflowEdge) herstellen, wenn in der Nähe gedroppt wurde
       if (nearNode) {
         this.addEdge(nearNode.id, newNode.id);
       }
@@ -490,14 +789,12 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
 
   @HostListener('window:mousemove', ['$event'])
   onWindowMouseMove(event: MouseEvent): void {
-    // 1. Knoten wird verschoben
     if (this.draggingNodeId) {
       this.hasDraggedNode = true;
       const { x, y } = this.getCanvasCoords(event.clientX, event.clientY);
       const nextX = Math.max(12, this.snapToGrid(x - this.dragOffsetX));
       const nextY = Math.max(12, this.snapToGrid(y - this.dragOffsetY));
 
-      // Prüfen, ob wir uns einem anderen Knoten nähern (Auto-Snap Vorschau)
       const snapCandidate = this.findNearestSnapNode(nextX, nextY, this.draggingNodeId);
       this.snapTargetNodeId.set(snapCandidate ? snapCandidate.id : null);
 
@@ -507,7 +804,6 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
       return;
     }
 
-    // 2. Verbindungspfeil wird manuell von einem Port gezogen
     const conn = this.activeConnection();
     if (conn) {
       const { x, y } = this.getCanvasCoords(event.clientX, event.clientY);
@@ -587,7 +883,7 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
   }
 
   // ===========================================================================
-  // KLICK AUF KNOTEN -> PROMPT-KONFIGURATIONSFENSTER (MODAL)
+  // KLICK AUF KNOTEN -> MODAL MIT TABS (LIVE-AUSGABE & PROMPT-KONFIGURATION)
   // ===========================================================================
 
   onNodeClick(event: MouseEvent, node: WorkflowNode): void {
@@ -603,6 +899,21 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
 
     this.editingNode.set(node);
     this.editingPromptText.set(node.prompt || '');
+
+    // Smarte UX: Wenn der Agent läuft, fertig ist oder bereits Ausgaben hat -> direkt Tab "output" öffnen
+    if (
+      this.isNodeRunning(node.id) ||
+      this.isNodeCompleted(node.id) ||
+      this.hasNodeExecutionData(node.id)
+    ) {
+      this.activeModalTab.set('output');
+    } else {
+      this.activeModalTab.set('prompt');
+    }
+  }
+
+  setModalTab(tab: 'prompt' | 'output'): void {
+    this.activeModalTab.set(tab);
   }
 
   saveNodePrompt(): void {
@@ -613,6 +924,7 @@ export class WorkflowWorkspaceComponent implements OnDestroy {
     this.nodes.update((list) =>
       list.map((n) => (n.id === current.id ? { ...n, prompt: updatedPrompt } : n))
     );
+    this.editingNode.update((n) => (n ? { ...n, prompt: updatedPrompt } : null));
     this.closePromptModal();
   }
 
